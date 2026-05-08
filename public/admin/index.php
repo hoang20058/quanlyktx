@@ -52,8 +52,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                     <th>Sinh viên</th>
                     <th>Mã SV</th>
                     <th>Phòng</th>
-                    <th>Tiền phòng phải nộp</th>
-                    <th>Tiền đã nộp</th>
                     <th class="text-danger">Công nợ</th>
                     <th>Thời hạn</th>
                 </tr>
@@ -64,8 +62,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                             <td><?= Security::e((string) $row['full_name']); ?></td>
                             <td><?= Security::e((string) $row['student_code']); ?></td>
                             <td>P<?= Security::e((string) $row['room_number']); ?></td>
-                            <td><?= number_format((float) $row['price'], 0, ',', '.'); ?> đ</td>
-                            <td><?= number_format((float) $row['deposit'], 0, ',', '.'); ?> đ</td>
                             <td class="text-danger fw-bold"><?= number_format((float) $row['debt'], 0, ',', '.'); ?> đ</td>
                             <td><?= $row['end_date'] ? Security::e((string) $row['end_date']) : '-'; ?></td>
                         </tr>

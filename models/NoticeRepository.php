@@ -70,7 +70,22 @@ final class NoticeRepository
 
     public static function delete(int $noticeId): bool
     {
-        $stmt = Database::connection()->prepare('DELETE FROM Notice WHERE notice_id = :id');
+        $db = Database::connection();
+        
+        // Lấy thông tin Notice trước khi xóa để revert point
+        $notice = self::find($noticeId);
+        if ($notice && (int) ($notice['point_change'] ?? 0) !== 0) {
+            // Revert điểm (trừ đi điểm_change để quay lại trạng thái cũ)
+            self::applyPointChange(
+                (string) $notice['target_type'],
+                -((int) $notice['point_change']),
+                isset($notice['room_id']) ? (int) $notice['room_id'] : null,
+                isset($notice['student_id']) ? (int) $notice['student_id'] : null
+            );
+        }
+        
+        // Sau đó xóa Notice
+        $stmt = $db->prepare('DELETE FROM Notice WHERE notice_id = :id');
         return $stmt->execute([':id' => $noticeId]);
     }
 

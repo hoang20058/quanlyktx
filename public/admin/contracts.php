@@ -34,8 +34,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
             <th>Phòng</th>
             <th>Ngày vào</th>
             <th>Ngày ra</th>
-            <th>Tiền phòng</th>
-            <th>Tiền cọc</th>
             <th>Công nợ</th>
             <th>Trạng thái</th>
             <th>Thao tác</th>
@@ -48,8 +46,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                 <td>P<?= Security::e((string) $contract['room_number']); ?></td>
                 <td><?= Security::e((string) $contract['start_date']); ?></td>
                 <td><?= $contract['end_date'] ? Security::e((string) $contract['end_date']) : '-'; ?></td>
-                <td><?= number_format((float) ($contract['price'] ?? 0), 0, ',', '.'); ?> đ</td>
-                <td><?= number_format((float) ($contract['deposit'] ?? 0), 0, ',', '.'); ?> đ</td>
                 <td class="<?= ((float)($contract['debt'] ?? 0) > 0) ? 'text-danger fw-bold' : 'text-success'; ?>"><?= number_format((float) ($contract['debt'] ?? 0), 0, ',', '.'); ?> đ</td>
                 <td><span class="badge text-bg-info"><?= Security::e((string) $contract['status']); ?></span></td>
                 <td>
@@ -96,22 +92,17 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                     <div class="col-12">
                         <div class="p-3 rounded-3 bg-light">
                             <div class="row g-2">
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <div class="small text-muted">Giảm giá</div>
                                     <div id="discountDisplay" class="fw-semibold">-</div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="small text-muted">Tiền phòng</div>
-                                    <div id="priceDisplay" class="fw-semibold">-</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="small text-muted">Công nợ (Tiền phòng - Tiền cọc)</div>
+                                <div class="col-md-6">
+                                    <div class="small text-muted">Công nợ</div>
                                     <div id="debtDisplay" class="fw-semibold text-danger">-</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-12"><label class="form-label">Tiền sinh viên đã nộp (Tiền cọc)</label><input name="deposit" type="number" step="0.01" class="form-control" value="0" required></div>
                     <div class="col-12"><label class="form-label">Trạng thái</label>
                         <select name="status" class="form-select">
                             <option>Đang ở</option>
@@ -214,7 +205,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         const roomPrice = parseFloat(roomSelect.options[roomSelect.selectedIndex].getAttribute('data-price') || '0');
         const startDate = startDateInput.value;
         const endDate = endDateInput.value;
-        const deposit = parseFloat(depositInput.value) || 0;
+        const deposit = 0; // deposit is no longer entered at contract creation; payments handled separately
 
         const discountPercent = getDiscountByPriority(priorityLevel);
 
@@ -245,7 +236,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         form.room_id.addEventListener('change', calculatePrice);
         form.start_date.addEventListener('change', calculatePrice);
         form.end_date.addEventListener('change', calculatePrice);
-        form.deposit.addEventListener('input', calculatePrice);
     }
 
     const saveBtn = document.getElementById('saveContractBtn');
@@ -254,18 +244,18 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
             const form = document.getElementById('contractForm');
             const data = new FormData(form);
             data.set('csrf_token', window.APP_CSRF);
-            
+
             try {
                 const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/save.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(Object.fromEntries(data))
+                    body: data
                 });
                 const json = await resp.json();
-                if (json.ok) {
+                if (resp.ok && json.ok) {
                     location.reload();
                 } else {
-                    alert('Lỗi: ' + json.message);
+                    // show nicer message if available
+                    alert('Lỗi: ' + (json.message || 'Không thể lưu hợp đồng'));
                 }
             } catch (err) {
                 alert('Lỗi kết nối');

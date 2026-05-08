@@ -52,9 +52,21 @@ try {
         $stmt = $db->prepare("UPDATE Student SET status = 'Đang ở' WHERE student_id = :id");
         $stmt->execute([':id' => $studentId]);
 
-        // insert contract
-        $ins = $db->prepare('INSERT INTO Contract (student_id, room_id, start_date, status) VALUES (:student_id, :room_id, CURDATE(), :status)');
-        $ins->execute([':student_id' => $studentId, ':room_id' => $roomId, ':status' => 'Đang ở']);
+        // insert contract with end_date set to 5 months from now (standard contract period)
+        $startDate = new DateTime();
+        $endDate = clone $startDate;
+        $endDate->modify('+5 months');
+        
+        $ins = $db->prepare('INSERT INTO Contract (student_id, room_id, start_date, end_date, deposit, discount_percent, status) VALUES (:student_id, :room_id, :start_date, :end_date, :deposit, :discount_percent, :status)');
+        $ins->execute([
+            ':student_id' => $studentId, 
+            ':room_id' => $roomId, 
+            ':start_date' => $startDate->format('Y-m-d'),
+            ':end_date' => $endDate->format('Y-m-d'),
+            ':deposit' => 0,
+            ':discount_percent' => 0,
+            ':status' => 'Đang ở'
+        ]);
         $contractId = (int) $db->lastInsertId();
 
         // insert notice (targeting the room and student)

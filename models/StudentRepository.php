@@ -28,6 +28,54 @@ final class StudentRepository
         return $student ?: null;
     }
 
+    /**
+     * Kiểm tra mã sinh viên đã tồn tại (bỏ qua ID hiện tại khi update)
+     */
+    public static function isStudentCodeDuplicate(string $code, int $excludeStudentId = 0): bool
+    {
+        $db = Database::connection();
+        if ($excludeStudentId > 0) {
+            $stmt = $db->prepare('SELECT COUNT(*) FROM Student WHERE student_code = :code AND student_id != :id');
+            $stmt->execute([':code' => $code, ':id' => $excludeStudentId]);
+        } else {
+            $stmt = $db->prepare('SELECT COUNT(*) FROM Student WHERE student_code = :code');
+            $stmt->execute([':code' => $code]);
+        }
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Kiểm tra định dạng email hợp lệ
+     */
+    public static function isValidEmail(string $email): bool
+    {
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+
+    /**
+     * Validate dữ liệu sinh viên trước lưu
+     * Trả về array ['ok' => bool, 'errors' => []]
+     */
+    public static function validate(array $data, int $studentId = 0): array
+    {
+        $errors = [];
+
+        $email = self::normalizeNullableString($data['email'] ?? null);
+        if ($email && !self::isValidEmail($email)) {
+            $errors[] = 'Email không hợp lệ';
+        }
+
+        $studentCode = self::normalizeNullableString($data['student_code'] ?? null);
+        if ($studentCode && self::isStudentCodeDuplicate($studentCode, $studentId)) {
+            $errors[] = 'Mã sinh viên đã tồn tại';
+        }
+
+        return [
+            'ok' => empty($errors),
+            'errors' => $errors
+        ];
+    }
+
     public static function save(array $data): int
     {
         $db = Database::connection();

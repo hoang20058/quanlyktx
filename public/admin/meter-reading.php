@@ -54,16 +54,30 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
             </select>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Chỉ số cũ (kWh / m³)</label>
-            <input name="old_meter" type="number" step="0.01" class="form-control" required>
+            <h6>Điện (kWh)</h6>
+            <label class="form-label">Chỉ số điện cũ</label>
+            <input name="old_electric" type="number" step="0.01" class="form-control" required>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Chỉ số mới (kWh / m³)</label>
-            <input name="new_meter" type="number" step="0.01" class="form-control" required>
+            <label class="form-label">Chỉ số điện mới</label>
+            <input name="new_electric" type="number" step="0.01" class="form-control" required>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Giá tính / đơn vị (đ)</label>
-            <input name="unit_price" type="number" step="0.01" class="form-control" value="50000" required>
+            <h6>Nước (m³)</h6>
+            <label class="form-label">Chỉ số nước cũ</label>
+            <input name="old_water" type="number" step="0.01" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Chỉ số nước mới</label>
+            <input name="new_water" type="number" step="0.01" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Giá điện (đ/kWh)</label>
+            <input name="unit_price_electric" type="number" step="0.01" class="form-control" value="4000" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Giá nước (đ/m³)</label>
+            <input name="unit_price_water" type="number" step="0.01" class="form-control" value="50000" required>
         </div>
         <div class="col-12">
             <div class="p-3 rounded-4 bg-light">
@@ -101,38 +115,48 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     const totalDisplay = document.getElementById('totalDisplay');
 
     const updateCalculation = () => {
-        const oldMeter = parseFloat(form.old_meter.value) || 0;
-        const newMeter = parseFloat(form.new_meter.value) || 0;
-        const unitPrice = parseFloat(form.unit_price.value) || 50000;
-        
-        const usage = Math.max(0, newMeter - oldMeter);
-        const total = usage * unitPrice;
+        const oldE = parseFloat(form.old_electric.value) || 0;
+        const newE = parseFloat(form.new_electric.value) || 0;
+        const unitE = parseFloat(form.unit_price_electric.value) || 4000;
 
-        usageDisplay.textContent = usage.toFixed(2);
-        priceDisplay.textContent = unitPrice.toLocaleString('vi-VN') + ' đ';
+        const oldW = parseFloat(form.old_water.value) || 0;
+        const newW = parseFloat(form.new_water.value) || 0;
+        const unitW = parseFloat(form.unit_price_water.value) || 50000;
+
+        const usageE = Math.max(0, newE - oldE);
+        const usageW = Math.max(0, newW - oldW);
+        const totalE = usageE * unitE;
+        const totalW = usageW * unitW;
+        const total = totalE + totalW;
+
+        usageDisplay.textContent = usageE.toFixed(2) + ' kWh / ' + usageW.toFixed(2) + ' m³';
+        priceDisplay.textContent = unitE.toLocaleString('vi-VN') + ' đ (điện) / ' + unitW.toLocaleString('vi-VN') + ' đ (nước)';
         totalDisplay.textContent = total.toLocaleString('vi-VN') + ' đ';
     };
 
-    form.old_meter.addEventListener('input', updateCalculation);
-    form.new_meter.addEventListener('input', updateCalculation);
-    form.unit_price.addEventListener('input', updateCalculation);
+    form.old_electric.addEventListener('input', updateCalculation);
+    form.new_electric.addEventListener('input', updateCalculation);
+    form.unit_price_electric.addEventListener('input', updateCalculation);
+    form.old_water.addEventListener('input', updateCalculation);
+    form.new_water.addEventListener('input', updateCalculation);
+    form.unit_price_water.addEventListener('input', updateCalculation);
 
     document.getElementById('submitMeterBtn').addEventListener('click', async () => {
         if (!form.room_id.value) { alert('Vui lòng chọn phòng'); return; }
-        if (parseFloat(form.new_meter.value) < parseFloat(form.old_meter.value)) { alert('Chỉ số mới phải >= chỉ số cũ'); return; }
+        if (parseFloat(form.new_electric.value) < parseFloat(form.old_electric.value)) { alert('Chỉ số điện mới phải >= chỉ số điện cũ'); return; }
+        if (parseFloat(form.new_water.value) < parseFloat(form.old_water.value)) { alert('Chỉ số nước mới phải >= chỉ số nước cũ'); return; }
 
-        const data = Object.fromEntries(new FormData(form));
-        data.csrf_token = window.APP_CSRF;
-        
+        const formData = new FormData(form);
+        formData.append('csrf_token', window.APP_CSRF);
+
         try {
             const resp = await fetch((window.APP_BASE_URL || '') + '/api/bills/meter-reading.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: formData
             });
             const json = await resp.json();
             if (resp.ok && json.ok) {
-                alert('Tạo hóa đơn thành công! Lượng: ' + json.usage.toFixed(2) + ' đơn vị. Tổng: ' + (json.total_amount || 0).toLocaleString('vi-VN') + ' đ');
+                alert('Tạo hóa đơn thành công! Lượng điện: ' + (json.usage_e || 0).toFixed(2) + ' kWh, Lượng nước: ' + (json.usage_w || 0).toFixed(2) + ' m³. Tổng: ' + (json.total_amount || 0).toLocaleString('vi-VN') + ' đ');
                 form.reset();
                 updateCalculation();
             } else {

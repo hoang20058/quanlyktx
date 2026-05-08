@@ -179,6 +179,17 @@ final class ContractRepository
         return $stmt->execute([':id' => $contractId]);
     }
 
+    /**
+     * Thêm khoản thanh toán vào hợp đồng (tăng trường `deposit` để ghi nhận số tiền đã thu)
+     */
+    public static function addPayment(int $contractId, float $amount): bool
+    {
+        if ($amount <= 0) return false;
+        $db = Database::connection();
+        $stmt = $db->prepare('UPDATE Contract SET deposit = COALESCE(deposit, 0) + :amount WHERE contract_id = :id');
+        return $stmt->execute([':amount' => $amount, ':id' => $contractId]);
+    }
+
     private static function normalizeNullableString(mixed $value): ?string
     {
         if ($value === null || $value === '') {

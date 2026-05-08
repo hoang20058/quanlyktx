@@ -153,11 +153,6 @@ require_once __DIR__ . '/../views/partials/public_header.php';
                     <div class="d-flex gap-3 align-items-start"><div class="icon-badge blue flex-shrink-0"><i class="bi bi-file-earmark-text"></i></div><div><div class="fw-semibold">Đăng ký lưu trú</div><div class="text-muted">Hồ sơ đăng ký được lưu vào bảng Student với trạng thái Chờ duyệt.</div></div></div>
                     <div class="d-flex gap-3 align-items-start"><div class="icon-badge amber flex-shrink-0"><i class="bi bi-receipt"></i></div><div><div class="fw-semibold">Thanh toán minh bạch</div><div class="text-muted">Hóa đơn điện nước, phí phòng và công nợ được chuẩn hóa theo tháng.</div></div></div>
                 </div>
-                <div class="mt-4 p-3 rounded-4 bg-light border">
-                    <div class="small text-secondary mb-1">Admin demo</div>
-                    <div class="fw-semibold">Mở khu vực quản trị để xem dashboard, CRUD và bảng xếp hạng.</div>
-                    <a class="btn btn-dark rounded-pill px-4 mt-3" href="admin/">Vào Admin</a>
-                </div>
             </div>
         </div>
     </div>

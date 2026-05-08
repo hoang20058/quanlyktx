@@ -16,6 +16,18 @@ if ($studentId <= 0 || $newRoomId <= 0) {
 }
 
 try {
+    // Kiểm tra phòng mới tồn tại
+    $newRoom = RoomRepository::find($newRoomId);
+    if (!$newRoom) {
+        Api::json(['ok' => false, 'message' => 'Phòng không tồn tại'], 422);
+    }
+
+    // Kiểm tra sức chứa của phòng
+    $occupancy = RoomRepository::getOccupancy($newRoomId);
+    if ($occupancy >= $newRoom['capacity']) {
+        Api::json(['ok' => false, 'message' => 'Phòng đã đầy (sức chứa: ' . $newRoom['capacity'] . ', hiện tại: ' . $occupancy . '), không thể chuyển sinh viên'], 400);
+    }
+
     StudentRepository::transferRoom($studentId, $newRoomId);
     Api::json(['ok' => true, 'message' => 'Chuyển phòng thành công']);
 } catch (Throwable $e) {

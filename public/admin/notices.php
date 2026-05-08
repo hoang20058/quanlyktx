@@ -42,12 +42,12 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                 <td><?= Security::e((string) $notice['date']); ?></td>
                 <td><?= Security::e((string) $notice['category']); ?></td>
                 <td>
-                    <?= Security::e((string) $notice['target_type']); ?>
+                    <div><?= Security::e((string) $notice['target_type']); ?></div>
                     <?php if (!empty($notice['room_number'])): ?>
-                        <div class="small text-secondary">Phòng P<?= Security::e((string) $notice['room_number']); ?></div>
+                        <div class="badge bg-info">Phòng P<?= Security::e((string) $notice['room_number']); ?></div>
                     <?php endif; ?>
                     <?php if (!empty($notice['student_name'])): ?>
-                        <div class="small text-secondary"><?= Security::e((string) $notice['student_name']); ?></div>
+                        <div class="badge bg-secondary"><?= Security::e((string) $notice['student_name']); ?></div>
                     <?php endif; ?>
                 </td>
                 <td><?= Security::e((string) $notice['point_change']); ?></td>
@@ -94,17 +94,17 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                             <div class="col-md-4">
                                 <label class="form-label">Đối tượng</label>
                                 <select name="target_type" class="form-select">
-                                    <option>Cả tòa</option>
-                                    <option>Phòng</option>
-                                    <option>Cá nhân</option>
+                                    <option value="Cả tòa">Cả tòa</option>
+                                    <option value="Phòng">Phòng</option>
+                                    <option value="Cá nhân">Cá nhân</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Loại</label>
                                 <select name="category" class="form-select">
-                                    <option>Thông báo chung</option>
-                                    <option>Khen thưởng</option>
-                                    <option>Kỷ luật</option>
+                                    <option value="Thông báo chung">Thông báo chung</option>
+                                    <option value="Khen thưởng">Khen thưởng</option>
+                                    <option value="Kỷ luật">Kỷ luật</option>
                                 </select>
                             </div>
                             <div class="col-md-4">

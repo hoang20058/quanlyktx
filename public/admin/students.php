@@ -82,13 +82,18 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     <div class="mt-5">
         <h4>Hồ sơ chờ duyệt</h4>
         <table class="table table-sm table-hover align-middle">
-            <thead><tr><th>Mã SV</th><th>Họ tên</th><th>Ngành</th><th>Thao tác</th></tr></thead>
+            <thead><tr><th>Mã SV</th><th>Họ tên</th><th>Ngành</th><th>Ưu tiên</th><th>Thao tác</th></tr></thead>
             <tbody>
             <?php foreach ($students as $row): if (($row['display_status'] ?? $row['status']) !== 'Chờ duyệt') continue; ?>
                 <tr>
                     <td class="fw-semibold"><?= Security::e((string) $row['student_code']); ?></td>
                     <td><?= Security::e((string) $row['full_name']); ?></td>
                     <td><?= Security::e((string) $row['department']); ?></td>
+                    <td>
+                        <span class="badge <?php if ($row['priority_level'] <= 3) { ?>bg-danger<?php } elseif ($row['priority_level'] <= 6) { ?>bg-warning<?php } else { ?>bg-secondary<?php } ?>">
+                            <?= Security::e((string) $row['priority_level']); ?>
+                        </span>
+                    </td>
                     <td>
                         <button class="btn btn-sm btn-success btn-approve-student" data-student-id="<?= Security::e((string) $row['student_id']); ?>" data-student-name="<?= Security::e((string) $row['full_name']); ?>">Duyệt</button>
                     </td>

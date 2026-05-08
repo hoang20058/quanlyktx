@@ -145,4 +145,14 @@ final class RoomRepository
             'maintenance' => (int) $db->query("SELECT COUNT(*) FROM Room WHERE status = 'Đang sửa chữa'")->fetchColumn(),
         ];
     }
+
+    /**
+     * Lấy số sinh viên hiện tại đang ở trong phòng (status = 'Đang ở')
+     */
+    public static function getOccupancy(int $roomId): int
+    {
+        $stmt = Database::connection()->prepare("SELECT COUNT(*) FROM Contract WHERE room_id = :room_id AND status = 'Đang ở'");
+        $stmt->execute([':room_id' => $roomId]);
+        return (int) $stmt->fetchColumn();
+    }
 }

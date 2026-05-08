@@ -21,26 +21,26 @@ declare(strict_types=1);
             <div class="col-lg-2 offset-lg-1">
                 <h5 class="mb-3">Liên kết</h5>
                 <ul class="nav flex-column">
-                    <li class="nav-item mb-2"><a href="/" class="nav-link p-0 text-muted">Trang chủ</a></li>
+                    <li class="nav-item mb-2"><a href="#" class="nav-link p-0 text-muted">Trang chủ</a></li>
                     <li class="nav-item mb-2"><a href="/#rooms" class="nav-link p-0 text-muted">Tra cứu phòng</a></li>
                     <li class="nav-item mb-2"><a href="/#notices" class="nav-link p-0 text-muted">Thông báo</a></li>
-                    <li class="nav-item mb-2"><a href="/register.php" class="nav-link p-0 text-muted">Đăng ký</a></li>
-                    <li class="nav-item mb-2"><a href="/contact.php" class="nav-link p-0 text-muted">Liên hệ</a></li>
+                    <li class="nav-item mb-2"><a href="/public/register.php" class="nav-link p-0 text-muted">Đăng ký</a></li>
+                    <li class="nav-item mb-2"><a href="/public/contact.php" class="nav-link p-0 text-muted">Liên hệ</a></li>
                 </ul>
             </div>
             <div class="col-lg-4 offset-lg-1">
                 <h5 class="mb-3">Liên hệ</h5>
                 <p class="text-muted mb-2">
-                    <i class="bi bi-geo-alt-fill me-2"></i>Khu II, Đ. 3/2, Xuân Khánh, Ninh Kiều, Cần Thơ
+                    <i class="bi bi-geo-alt-fill me-2"></i>Hạ Mỗ, Ô Diên, Hà Nội, Việt Nam
                 </p>
                 <p class="text-muted mb-2">
-                    <i class="bi bi-telephone-fill me-2"></i>(0292) 3834 441
+                    <i class="bi bi-telephone-fill me-2"></i>0123456590
                 </p>
                 <p class="text-muted mb-3">
                     <i class="bi bi-envelope-fill me-2"></i>bqlktx@ctu.edu.vn
                 </p>
                 <div class="rounded-3 overflow-hidden" style="height: 200px;">
-                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3929.2738551652567!2d106.26629!3d10.001447!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31395342e22c77ef%3A0x7c3c3c3c3c3c3c3c!2sKhu%20II%2C%203%2F2%2C%20Xuan%20Khanh%2C%20Ninh%20Kieu%2C%20Can%20Tho!5e0!3m2!1svi!2svn!4v1715000000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d1315.9803980565737!2d105.70165641605598!3d21.106399595819425!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2s!5e0!3m2!1svi!2s!4v1778252727143!5m2!1svi!2s" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                 </div>
             </div>
         </div>

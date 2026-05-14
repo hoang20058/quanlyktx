@@ -13,7 +13,7 @@ declare(strict_types=1);
 <script>
     window.APP_BASE_URL = "<?= Security::e(APP_BASE_URL); ?>";
 </script>
-<script src="<?= Security::e(APP_BASE_URL); ?>/assets/js/app.js"></script>
+<script src="<?= Security::e(APP_BASE_URL); ?>/assets/js/app.js?v=1.3"></script>
 <!-- Toast container + global alert override to use Bootstrap toasts -->
 <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 1080;">
     <div id="globalToastContainer"></div>

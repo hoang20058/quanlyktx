@@ -14,271 +14,279 @@ $topRooms = RoomRepository::topRooms(5);
 $topStudents = StudentRepository::topStudents(5);
 $unpaidBills = UtilityBillRepository::unpaidBills();
 
-$stats = [
-    ['label' => 'Phòng đang hoạt động', 'value' => (string) $roomStats['activeRooms'], 'icon' => 'bi-door-open', 'class' => 'primary'],
-    ['label' => 'Sinh viên nội trú', 'value' => (string) $studentStats['living'], 'icon' => 'bi-mortarboard', 'class' => 'blue'],
-    ['label' => 'Hồ sơ chờ duyệt', 'value' => (string) $studentStats['waiting'], 'icon' => 'bi-file-earmark-text', 'class' => 'amber'],
-    ['label' => 'Thông báo', 'value' => (string) count($notices), 'icon' => 'bi-megaphone', 'class' => 'rose'],
-];
+$totalCapacity = max(1, (int) $roomStats['totalCapacity']);
+$occupiedCount = (int) $roomStats['occupied'];
+$occupancyRate = min(100, (int) round(($occupiedCount / $totalCapacity) * 100));
+$activeRooms = array_values(array_filter($rooms, static fn (array $room): bool => (string) ($room['status'] ?? '') === 'Hoạt động'));
+$availableRooms = array_values(array_filter($activeRooms, static fn (array $room): bool => (int) ($room['occupied_count'] ?? 0) < (int) ($room['capacity'] ?? 0)));
+$latestNotices = array_slice($notices, 0, 5);
+$highlightRooms = array_slice($rooms, 0, 8);
+$visibleBills = array_slice($unpaidBills, 0, 6);
+$visibleTopStudents = array_slice($topStudents, 0, 5);
 
 require_once __DIR__ . '/../views/partials/public_header.php';
 ?>
-<div class="hero-full-screen">
-    <div class="hero-background">
-        <img src="https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=2874&auto=format&fit=crop" alt="Ký túc xá hiện đại">
-    </div>
-    <div class="hero-content container">
-        <div class="row">
-            <div class="col-lg-8">
-                <div class="hero-kicker mb-3"><i class="bi bi-stars"></i> Nền tảng quản lý ký túc xá tập trung</div>
-                <h1 class="hero-title fw-bold mb-3">Quản lý phòng ở, hợp đồng, hóa đơn và thông báo.</h1>
-                <p class="hero-lead mb-4">Giao diện public cho sinh viên xem phòng trống, thông báo mới, bảng xếp hạng và đăng ký nội trú ngay trên một trang.</p>
-                <div class="d-flex flex-wrap gap-3">
-                    <a class="btn btn-light btn-lg rounded-pill px-4" href="#rooms"><i class="bi bi-search me-2"></i>Xem phòng trống</a>
-                    <a class="btn btn-outline-light btn-lg rounded-pill px-4" href="register.php">Đăng ký ở KTX</a>
+<section class="public-home">
+    <div class="public-hero" id="top">
+        <div class="public-hero-media">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1800&auto=format&fit=crop" alt="Khu ký túc xá hiện đại">
+        </div>
+        <div class="container public-hero-content">
+            <div class="public-hero-copy">
+                <div class="public-kicker">Cổng thông tin nội trú sinh viên</div>
+                <h1>Ký túc xá minh bạch, dễ tra cứu và sẵn sàng đăng ký.</h1>
+                <p>Sinh viên có thể xem tình trạng phòng, theo dõi thông báo, tra cứu hóa đơn và gửi hồ sơ đăng ký nội trú trên một giao diện thống nhất.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-primary btn-lg" href="<?= Security::e(APP_URL); ?>/register.php">
+                        <i class="bi bi-pencil-square me-2"></i>Đăng ký nội trú
+                    </a>
+                    <a class="btn btn-light btn-lg" href="#rooms">
+                        <i class="bi bi-door-open me-2"></i>Xem phòng
+                    </a>
+                    <a class="btn btn-outline-light btn-lg" href="<?= Security::e(APP_URL); ?>/bill-inquiry.php">
+                        <i class="bi bi-receipt me-2"></i>Tra cứu hóa đơn
+                    </a>
+                </div>
+            </div>
+            <div class="public-hero-summary" aria-label="Tổng quan nhanh">
+                <div>
+                    <span>Phòng hoạt động</span>
+                    <strong><?= Security::e((string) $roomStats['activeRooms']); ?></strong>
+                </div>
+                <div>
+                    <span>Chỗ còn có thể đăng ký</span>
+                    <strong><?= Security::e((string) max(0, $totalCapacity - $occupiedCount)); ?></strong>
+                </div>
+                <div>
+                    <span>Hồ sơ chờ duyệt</span>
+                    <strong><?= Security::e((string) $studentStats['waiting']); ?></strong>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<section class="container my-5">
-    <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-inner panel-glass rounded-4">
-            <div class="carousel-item active">
-                <div class="p-4 p-lg-5">
-                    <div class="text-muted mb-1">Cập nhật hôm nay</div>
-                    <div class="fs-3 fw-bold"><?= date('d/m/Y'); ?></div>
-                    <div class="mt-4 panel-glass rounded-4 p-3 bg-light">
-                        <div class="small text-muted mb-1">Phòng hoạt động</div>
-                        <div class="h3 mb-0"><?= Security::e((string) $roomStats['activeRooms']); ?></div>
-                    </div>
-                </div>
+    <div class="container">
+        <section class="home-metric-strip" aria-label="Chỉ số ký túc xá">
+            <div class="home-metric">
+                <span>Phòng còn nhận hồ sơ</span>
+                <strong><?= Security::e((string) count($availableRooms)); ?></strong>
             </div>
-            <div class="carousel-item">
-                <div class="p-4 p-lg-5">
-                    <div class="text-muted mb-1">Hồ sơ chờ duyệt</div>
-                    <div class="fs-3 fw-bold"><?= Security::e((string) $studentStats['waiting']); ?></div>
-                    <div class="mt-4 panel-glass rounded-4 p-3 bg-light">
-                        <div class="small text-muted mb-1">Điểm cao nhất</div>
-                        <div class="h3 mb-0"><?= Security::e((string) $studentStats['topScore']); ?></div>
-                    </div>
-                </div>
+            <div class="home-metric">
+                <span>Sinh viên đang ở</span>
+                <strong><?= Security::e((string) $studentStats['living']); ?></strong>
             </div>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+            <div class="home-metric">
+                <span>Tỷ lệ lấp đầy</span>
+                <strong><?= Security::e((string) $occupancyRate); ?>%</strong>
+            </div>
+            <div class="home-metric">
+                <span>Thông báo đang hiển thị</span>
+                <strong><?= Security::e((string) count($notices)); ?></strong>
+            </div>
+        </section>
     </div>
-</section>
 
-<section class="container my-5">
-    <div class="row g-4">
-        <?php foreach ($stats as $stat): ?>
-            <div class="col-12 col-md-6 col-xl-3">
-                <div class="stat-card h-100 p-4">
-                    <div class="d-flex align-items-start justify-content-between">
-                        <div>
-                            <div class="text-muted mb-2"><?= Security::e($stat['label']); ?></div>
-                            <div class="stat-value"><?= Security::e($stat['value']); ?></div>
+    <section class="home-section" id="rooms">
+        <div class="container">
+            <div class="home-section-head">
+                <div>
+                    <span>Danh sách phòng</span>
+                    <h2>Không gian đang vận hành</h2>
+                </div>
+                <a class="btn btn-outline-dark" href="<?= Security::e(APP_URL); ?>/register.php">Gửi hồ sơ đăng ký</a>
+            </div>
+
+            <div class="home-room-list">
+                <?php if (empty($highlightRooms)): ?>
+                    <div class="home-empty">Chưa có dữ liệu phòng để hiển thị.</div>
+                <?php endif; ?>
+
+                <?php foreach ($highlightRooms as $room): ?>
+                    <?php
+                    $capacity = max(1, (int) ($room['capacity'] ?? 0));
+                    $occupied = max(0, (int) ($room['occupied_count'] ?? 0));
+                    $usage = min(100, (int) round(($occupied / $capacity) * 100));
+                    $roomStatus = (string) ($room['status'] ?? '');
+                    $isAvailable = $roomStatus === 'Hoạt động' && $occupied < $capacity;
+                    ?>
+                    <article class="home-room-row">
+                        <div class="home-room-id">
+                            <span>Tầng <?= Security::e((string) $room['floor_number']); ?></span>
+                            <strong>P<?= Security::e((string) $room['room_number']); ?></strong>
                         </div>
-                        <div class="icon-badge <?= Security::e($stat['class']); ?>"><i class="bi <?= Security::e($stat['icon']); ?>"></i></div>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
-</section>
-
-<section class="container my-5" id="rooms">
-    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
-        <div>
-            <div class="section-subtitle text-uppercase fw-semibold small">Danh sách phòng</div>
-            <h2 class="section-title mb-0">Phòng đang sẵn sàng cho sinh viên</h2>
-        </div>
-        <a class="btn btn-outline-dark rounded-pill px-4" href="admin/rooms.php">Xem bảng quản lý</a>
-    </div>
-    <div class="row g-4">
-        <?php foreach ($rooms as $room): ?>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="room-card p-4 h-100">
-                    <?php if (!empty($room['room_image_url'])): ?>
-                        <div class="mb-3" style="height: 180px; border-radius: 0.5rem; overflow: hidden; background: #e9ecef;">
-                            <img src="<?= Security::e((string) $room['room_image_url']); ?>" alt="Phòng <?= Security::e((string) $room['room_number']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                    <?php endif; ?>
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <div class="text-uppercase small text-muted fw-semibold">Tầng <?= Security::e((string) $room['floor_number']); ?></div>
-                            <h3 class="h4 mb-1">P<?= Security::e((string) $room['room_number']); ?></h3>
-                        </div>
-                        <span class="status-pill <?= $room['status'] === 'Hoạt động' ? 'available' : 'maintenance'; ?>"><?= Security::e((string) $room['status']); ?></span>
-                    </div>
-                    <div class="room-meta mb-3">Loại phòng: <?= Security::e((string) $room['room_type']); ?></div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <div><div class="small text-muted">Sức chứa</div><div class="fw-semibold"><?= Security::e((string) $room['capacity']); ?> người</div></div>
-                        <div><div class="small text-muted">Đang ở</div><div class="fw-semibold"><?= Security::e((string) $room['occupied_count']); ?> người</div></div>
-                        <div><div class="small text-muted">Giá phòng</div><div class="fw-semibold"><?= number_format((float) $room['price'], 0, ',', '.'); ?> đ</div></div>
-                    </div>
-                    <div class="progress mb-2" style="height:10px; border-radius:999px;">
-                        <?php $usage = (int) ($room['capacity'] > 0 ? round(($room['occupied_count'] / $room['capacity']) * 100) : 0); ?>
-                        <div class="progress-bar bg-primary" style="width: <?= $usage; ?>%"></div>
-                    </div>
-                    <div class="small text-muted">Tỷ lệ sử dụng: <?= $usage; ?>%</div>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
-</section>
-
-<section class="container my-5" id="notices">
-    <div class="row g-4 align-items-stretch">
-        <div class="col-lg-7">
-            <div class="notice-card p-4 p-lg-5 h-100">
-                <div class="section-subtitle text-uppercase fw-semibold small mb-2">Thông báo mới nhất</div>
-                <h2 class="section-title mb-4">Các cập nhật quan trọng cho sinh viên</h2>
-                <div class="d-grid gap-4">
-                    <?php foreach ($notices as $notice): ?>
-                        <div class="timeline-step">
-                            <div class="d-flex flex-wrap justify-content-between gap-2">
-                                <h3 class="h5 mb-1"><?= Security::e((string) $notice['category']); ?></h3>
-                                <span class="badge text-bg-light text-muted rounded-pill"><?= Security::e((string) $notice['date']); ?></span>
+                        <div class="home-room-main">
+                            <div class="home-room-title">
+                                <strong><?= Security::e((string) $room['room_type']); ?></strong>
+                                <span class="status-pill <?= $isAvailable ? 'available' : 'maintenance'; ?>">
+                                    <?= $isAvailable ? 'Còn chỗ' : Security::e($roomStatus); ?>
+                                </span>
                             </div>
-                            <p class="mb-0 text-muted"><?= Security::e((string) $notice['description']); ?></p>
+                            <div class="home-meter" aria-label="Tỷ lệ sử dụng phòng">
+                                <span style="width: <?= $usage; ?>%"></span>
+                            </div>
+                        </div>
+                        <div class="home-room-data">
+                            <span><?= Security::e((string) $occupied); ?>/<?= Security::e((string) $capacity); ?> người</span>
+                            <span><?= number_format((float) ($room['price'] ?? 0), 0, ',', '.'); ?> đ/tháng</span>
+                            <span>Điểm TB <?= Security::e((string) ($room['avg_boarding_score'] ?? 0)); ?></span>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-section home-section-soft" id="notices">
+        <div class="container">
+            <div class="home-two-column">
+                <div>
+                    <div class="home-section-head compact">
+                        <div>
+                            <span>Thông báo</span>
+                            <h2>Cập nhật mới cho sinh viên</h2>
+                        </div>
+                    </div>
+                    <div class="home-notice-list">
+                        <?php if (empty($latestNotices)): ?>
+                            <div class="home-empty">Chưa có thông báo mới.</div>
+                        <?php endif; ?>
+
+                        <?php foreach ($latestNotices as $notice): ?>
+                            <article class="home-notice-item">
+                                <time><?= Security::e((string) $notice['date']); ?></time>
+                                <div>
+                                    <strong><?= Security::e((string) $notice['category']); ?></strong>
+                                    <p><?= Security::e((string) $notice['description']); ?></p>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <aside class="home-process-panel">
+                    <span>Quy trình đăng ký</span>
+                    <h2>Từ hồ sơ đến phân phòng</h2>
+                    <ol class="home-process-list">
+                        <li>
+                            <strong>Gửi hồ sơ</strong>
+                            <p>Sinh viên nhập thông tin cá nhân, ngành/khoa và đối tượng ưu tiên.</p>
+                        </li>
+                        <li>
+                            <strong>Ban quản lý xét duyệt</strong>
+                            <p>Hồ sơ được đưa vào danh sách chờ duyệt để admin kiểm tra và gán phòng.</p>
+                        </li>
+                        <li>
+                            <strong>Tạo hợp đồng</strong>
+                            <p>Khi duyệt thành công, hệ thống ghi nhận sinh viên đang ở và tạo hợp đồng nội trú.</p>
+                        </li>
+                    </ol>
+                </aside>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-section" id="leaderboard">
+        <div class="container">
+            <div class="home-grid-dashboard">
+                <div>
+                    <div class="home-section-head compact">
+                        <div>
+                            <span>Xếp hạng phòng</span>
+                            <h2>Phòng nổi bật theo sức chứa và điểm nội trú</h2>
+                        </div>
+                    </div>
+                    <div class="home-ranking-table">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Phòng</th>
+                                <th>Đang ở</th>
+                                <th>Điểm TB</th>
+                                <th>Giá</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($topRooms as $room): ?>
+                                <tr>
+                                    <td>P<?= Security::e((string) $room['room_number']); ?></td>
+                                    <td><?= Security::e((string) $room['occupancy']); ?>/<?= Security::e((string) $room['capacity']); ?></td>
+                                    <td><?= Security::e((string) $room['avg_boarding_score']); ?></td>
+                                    <td><?= number_format((float) ($room['price'] ?? 0), 0, ',', '.'); ?> đ</td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="home-section-head compact">
+                        <div>
+                            <span>Sinh viên tiêu biểu</span>
+                            <h2>Điểm nội trú cao</h2>
+                        </div>
+                    </div>
+                    <div class="home-student-list">
+                        <?php if (empty($visibleTopStudents)): ?>
+                            <div class="home-empty">Chưa có dữ liệu sinh viên.</div>
+                        <?php endif; ?>
+
+                        <?php foreach ($visibleTopStudents as $index => $student): ?>
+                            <div class="home-student-row">
+                                <span><?= $index + 1; ?></span>
+                                <div>
+                                    <strong><?= Security::e((string) $student['full_name']); ?></strong>
+                                    <small><?= Security::e((string) ($student['student_code'] ?: 'Chưa có mã')); ?> · <?= Security::e((string) ($student['department'] ?: 'Chưa cập nhật khoa')); ?></small>
+                                </div>
+                                <b><?= Security::e((string) $student['boarding_score']); ?></b>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-section home-section-soft">
+        <div class="container">
+            <div class="home-bill-panel">
+                <div>
+                    <span>Tra cứu tài chính</span>
+                    <h2>Hóa đơn điện nước chưa thanh toán</h2>
+                    <p>Danh sách này giúp sinh viên nhanh chóng nhận biết các phòng còn hóa đơn cần xử lý.</p>
+                    <a class="btn btn-primary" href="<?= Security::e(APP_URL); ?>/bill-inquiry.php">Tra cứu theo phòng</a>
+                </div>
+                <div class="home-bill-list">
+                    <?php if (empty($visibleBills)): ?>
+                        <div class="home-empty">Hiện không có hóa đơn chưa thanh toán.</div>
+                    <?php endif; ?>
+
+                    <?php foreach ($visibleBills as $bill): ?>
+                        <div class="home-bill-row">
+                            <strong>P<?= Security::e((string) $bill['room_number']); ?></strong>
+                            <span><?= Security::e((string) $bill['billing_month']); ?>/<?= Security::e((string) $bill['billing_year']); ?></span>
+                            <b><?= number_format((float) $bill['total_amount'], 0, ',', '.'); ?> đ</b>
                         </div>
                     <?php endforeach; ?>
                 </div>
             </div>
         </div>
-        <div class="col-lg-5">
-            <div class="feature-card p-4 p-lg-5 h-100">
-                <div class="section-subtitle text-uppercase fw-semibold small mb-2">Trải nghiệm sinh viên</div>
-                <h2 class="section-title mb-4">Từ xem phòng đến ở nội trú</h2>
-                <div class="d-grid gap-3">
-                    <div class="d-flex gap-3 align-items-start"><div class="icon-badge primary flex-shrink-0"><i class="bi bi-search"></i></div><div><div class="fw-semibold">Tra cứu nhanh</div><div class="text-muted">Sinh viên xem phòng trống, sức chứa và mức phí ngay trên trang chủ.</div></div></div>
-                    <div class="d-flex gap-3 align-items-start"><div class="icon-badge blue flex-shrink-0"><i class="bi bi-file-earmark-text"></i></div><div><div class="fw-semibold">Đăng ký lưu trú</div><div class="text-muted">Hồ sơ đăng ký được lưu vào bảng Student với trạng thái Chờ duyệt.</div></div></div>
-                    <div class="d-flex gap-3 align-items-start"><div class="icon-badge amber flex-shrink-0"><i class="bi bi-receipt"></i></div><div><div class="fw-semibold">Thanh toán minh bạch</div><div class="text-muted">Hóa đơn điện nước, phí phòng và công nợ được chuẩn hóa theo tháng.</div></div></div>
+    </section>
+
+    <section class="home-final-cta">
+        <div class="container">
+            <div class="home-final-inner">
+                <div>
+                    <span>Sẵn sàng nộp hồ sơ?</span>
+                    <h2>Đăng ký nội trú và chờ ban quản lý xét duyệt.</h2>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-light btn-lg" href="<?= Security::e(APP_URL); ?>/register.php">Mở form đăng ký</a>
+                    <a class="btn btn-outline-light btn-lg" href="<?= Security::e(APP_URL); ?>/contact.php">Liên hệ hỗ trợ</a>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </section>
 
-<section class="container mb-5">
-    <div class="alert alert-danger d-flex align-items-center" role="alert">
-        <i class="bi bi-receipt-cutoff me-2" style="font-size:1.25rem"></i>
-        <div>
-            <strong>💳 Hóa đơn chưa thanh toán</strong>
-            <div class="small">Danh sách các hóa đơn điện nước tháng này đang chờ thanh toán.</div>
-        </div>
-    </div>
-    <div class="table-panel p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h4 class="mb-0">Danh sách chưa thanh toán</h4>
-                <div class="small text-muted">Hóa đơn điện nước có status = "Chưa thanh toán"</div>
-            </div>
-            <div><a href="bill-inquiry.php" class="btn btn-outline-primary">Tra cứu hóa đơn của bạn</a></div>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle">
-                <thead><tr><th>Phòng</th><th>Tháng/Năm</th><th>Số tiền</th><th>Trạng thái</th></tr></thead>
-                <tbody>
-                <?php foreach (array_slice($unpaidBills, 0, 20) as $bill): ?>
-                    <tr>
-                        <td class="fw-semibold">P<?= Security::e((string)$bill['room_number']); ?></td>
-                        <td><?= Security::e((string)$bill['billing_month']); ?>/<?= Security::e((string)$bill['billing_year']); ?></td>
-                        <td><?= number_format((float)$bill['total_amount'], 0, ',', '.'); ?> đ</td>
-                        <td><span class="badge text-bg-warning">⚠ Chưa thanh toán</span></td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="section-subtitle text-uppercase fw-semibold small mb-2">Leaderboard</div>
-    <h2 class="section-title mb-3">Top phòng nổi bật</h2>
-    <div class="row g-4">
-        <?php foreach ($topRooms as $room): ?>
-            <?php $studentsInRoom = RoomRepository::studentsByRoom((int)$room['room_id']); ?>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="room-card p-4 h-100">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <div class="text-uppercase small text-muted fw-semibold">Tầng <?= Security::e((string) $room['floor_number']); ?></div>
-                            <h3 class="h4 mb-1">P<?= Security::e((string) $room['room_number']); ?></h3>
-                        </div>
-                        <span class="status-pill <?= $room['status'] === 'Hoạt động' ? 'available' : 'maintenance'; ?>">P<?= Security::e((string) $room['room_number']); ?></span>
-                    </div>
-                    <div class="room-meta mb-3">Giá: <?= number_format((float) $room['price'], 0, ',', '.'); ?> đ · Sức chứa <?= Security::e((string)$room['capacity']); ?></div>
-                    <div class="d-flex gap-3 mb-3">
-                        <?php foreach (array_slice($studentsInRoom, 0, 5) as $s): ?>
-                            <div class="text-center small">
-                                <?= Security::e((string)$s['full_name']); ?><br>
-                                <span class="text-muted"><?= Security::e((string)$s['boarding_score']); ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="small text-muted">Đang ở: <?= Security::e((string)$room['occupancy']); ?>/<?= Security::e((string)$room['capacity']); ?></div>
-                        <div class="fw-semibold">Điểm TB: <?= Security::e((string)$room['avg_boarding_score']); ?></div>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
-</section>
-
-<section class="container mb-5" id="cta">
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="feature-card p-5 h-100 text-center" style="background: linear-gradient(135deg, var(--app-primary), var(--app-accent)); color: #fff;">
-                <div class="mb-3" style="font-size: 3rem;"><i class="bi bi-pencil-square"></i></div>
-                <h3 class="fw-bold mb-3">Đăng ký nội trú</h3>
-                <p class="mb-4">Gửi hồ sơ của bạn để ban quản lý duyệt và phân phòng</p>
-                <a href="register.php" class="btn btn-light rounded-pill px-5 fw-semibold">Đi đến form đăng ký</a>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="feature-card p-5 h-100 text-center" style="background: linear-gradient(135deg, #16a34a, #4ade80); color: #fff;">
-                <div class="mb-3" style="font-size: 3rem;"><i class="bi bi-chat-left-dots"></i></div>
-                <h3 class="fw-bold mb-3">Liên hệ với chúng tôi</h3>
-                <p class="mb-4">Có câu hỏi hoặc cần hỗ trợ? Gửi tin nhắn cho chúng tôi ngay</p>
-                <a href="contact.php" class="btn btn-light rounded-pill px-5 fw-semibold">Mở trang liên hệ</a>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="container mb-5" id="process">
-    <div class="panel-glass rounded-5 p-4 p-lg-5">
-        <div class="row g-4 align-items-center">
-            <div class="col-lg-5">
-                <div class="section-subtitle text-uppercase fw-semibold small mb-2">Quy trình sơ bộ</div>
-                <h2 class="section-title mb-3">Luồng vận hành khi hệ thống hoàn chỉnh</h2>
-                <p class="section-subtitle mb-0">Trang chủ đã có dữ liệu thật, form đăng ký, leaderboard và liên kết đến khu vực quản trị.</p>
-            </div>
-            <div class="col-lg-7">
-                <div class="row g-3">
-                    <div class="col-md-4"><div class="feature-card p-4 h-100"><div class="fw-bold mb-2">1. Xem phòng</div><div class="text-secondary">Sinh viên duyệt danh sách phòng trống và lựa chọn phòng phù hợp.</div></div></div>
-                    <div class="col-md-4"><div class="feature-card p-4 h-100"><div class="fw-bold mb-2">2. Gửi hồ sơ</div><div class="text-secondary">Form đăng ký tạo hồ sơ sinh viên với trạng thái Chờ duyệt.</div></div></div>
-                    <div class="col-md-4"><div class="feature-card p-4 h-100"><div class="fw-bold mb-2">3. Xử lý nội trú</div><div class="text-secondary">Admin quản lý sinh viên, phòng và thông báo ngay trong dashboard.</div></div></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
 <?php require_once __DIR__ . '/../views/partials/public_footer.php'; ?>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const mapping = <?= json_encode(array_combine(range(1,8), array_map('strval', array_map('getPriorityDescription', range(1,8))))); ?>;
-    const sel = document.getElementById('priority_level');
-    const desc = document.getElementById('priority_desc');
-    if (sel && desc) {
-        sel.addEventListener('change', function () {
-            const v = parseInt(this.value, 10) || 8;
-            desc.textContent = mapping[v] || mapping[8];
-        });
-    }
-});
-</script>

@@ -30,12 +30,42 @@ final class NoticeRepository
         $db = Database::connection();
         $noticeId = (int) ($data['notice_id'] ?? 0);
         $existing = $noticeId > 0 ? self::find($noticeId) : null;
+        $targetType = (string) ($data['target_type'] ?? 'Cả tòa');
+        $roomId = self::nullableInt($data['room_id'] ?? null);
+        $studentId = self::nullableInt($data['student_id'] ?? null);
+        $pointChange = (int) ($data['point_change'] ?? 0);
+
+        if ($targetType === 'Cả tòa') {
+            $roomId = null;
+            $studentId = null;
+            $pointChange = 0;
+        } elseif ($targetType === 'Phòng') {
+            if (!$roomId) {
+                throw new InvalidArgumentException('Vui lòng chọn phòng.');
+            }
+
+            $studentId = null;
+            $pointChange = 0;
+        } elseif ($targetType === 'Cá nhân') {
+            if (!$roomId) {
+                throw new InvalidArgumentException('Vui lòng chọn phòng trước khi chọn sinh viên.');
+            }
+
+            if (!$studentId) {
+                throw new InvalidArgumentException('Vui lòng chọn sinh viên.');
+            }
+
+            if (!self::studentBelongsToRoom($studentId, $roomId)) {
+                throw new InvalidArgumentException('Sinh viên không thuộc phòng đã chọn.');
+            }
+        }
+
         $payload = [
-            ':target_type' => (string) ($data['target_type'] ?? 'Cả tòa'),
+            ':target_type' => $targetType,
             ':category' => (string) ($data['category'] ?? 'Thông báo chung'),
-            ':point_change' => (int) ($data['point_change'] ?? 0),
-            ':room_id' => self::nullableInt($data['room_id'] ?? null),
-            ':student_id' => self::nullableInt($data['student_id'] ?? null),
+            ':point_change' => $pointChange,
+            ':room_id' => $roomId,
+            ':student_id' => $studentId,
             ':description' => self::nullableString($data['description'] ?? null),
             ':date' => (string) ($data['date'] ?? date('Y-m-d')),
         ];
@@ -128,5 +158,22 @@ final class NoticeRepository
     {
         $value = is_string($value) ? trim($value) : '';
         return $value === '' ? null : $value;
+    }
+
+    private static function studentBelongsToRoom(int $studentId, int $roomId): bool
+    {
+        $stmt = Database::connection()->prepare("
+            SELECT COUNT(*)
+              FROM Contract
+             WHERE student_id = :student_id
+               AND room_id = :room_id
+               AND status = 'Đang ở'
+        ");
+        $stmt->execute([
+            ':student_id' => $studentId,
+            ':room_id' => $roomId,
+        ]);
+
+        return (int) $stmt->fetchColumn() > 0;
     }
 }

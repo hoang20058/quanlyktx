@@ -15,6 +15,15 @@ if (!$contract) {
 
 $student = StudentRepository::find((int) $contract['student_id']);
 $room = RoomRepository::find((int) $contract['room_id']);
+$stmt = Database::connection()->prepare('SELECT b.* FROM UtilityBill b WHERE b.room_id = :room_id ORDER BY b.billing_year DESC, b.billing_month DESC');
+$stmt->execute([':room_id' => $contract['room_id']]);
+$bills = $stmt->fetchAll();
+$detailBillStatuses = array_values(array_unique(array_filter(array_map(static fn (array $bill): string => (string) ($bill['status'] ?? ''), $bills))));
+sort($detailBillStatuses);
+$detailBillMonths = array_values(array_unique(array_filter(array_map(static fn (array $bill): string => (string) ($bill['billing_month'] ?? ''), $bills), static fn (string $value): bool => $value !== '')));
+sort($detailBillMonths, SORT_NUMERIC);
+$detailBillYears = array_values(array_unique(array_filter(array_map(static fn (array $bill): string => (string) ($bill['billing_year'] ?? ''), $bills), static fn (string $value): bool => $value !== '')));
+sort($detailBillYears, SORT_NUMERIC);
 
 $pageTitle = 'Chi tiết hợp đồng #' . $contract['contract_id'] . ' - ' . APP_NAME;
 $activeMenu = 'contracts';
@@ -33,6 +42,11 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
             <h5>Hợp đồng</h5>
             <form id="detailForm" class="row g-3">
                 <input type="hidden" name="contract_id" value="<?= Security::e((string)$contract['contract_id']); ?>">
+                <input type="hidden" name="student_id" value="<?= Security::e((string)$contract['student_id']); ?>">
+                <input type="hidden" name="room_id" value="<?= Security::e((string)$contract['room_id']); ?>">
+                <input type="hidden" name="deposit" value="<?= Security::e((string)($contract['deposit'] ?? 0)); ?>">
+                <input type="hidden" name="discount_percent" value="<?= Security::e((string)($contract['discount_percent'] ?? 0)); ?>">
+                <input type="hidden" name="status" value="<?= Security::e((string)$contract['status']); ?>">
                 <div class="col-6"><label class="form-label">Ngày vào</label><input name="start_date" type="date" class="form-control" value="<?= Security::e((string)$contract['start_date']); ?>" readonly></div>
                 <div class="col-6"><label class="form-label">Ngày kết thúc</label><input name="end_date" type="date" class="form-control" value="<?= Security::e((string)($contract['end_date'] ?? '')); ?>"></div>
                 <div class="col-12 d-flex gap-2">
@@ -46,17 +60,49 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 
     <div class="mt-4 card card-glass p-3">
         <h5>Hóa đơn liên quan</h5>
-        <?php
-        $stmt = Database::connection()->prepare('SELECT b.* FROM UtilityBill b WHERE b.room_id = :room_id ORDER BY b.billing_year DESC, b.billing_month DESC');
-        $stmt->execute([':room_id' => $contract['room_id']]);
-        $bills = $stmt->fetchAll();
-        ?>
+        <?php if (empty($bills)): ?>
+            <div class="alert alert-info border-0 mb-0">Chưa có hóa đơn nào liên quan đến hợp đồng này.</div>
+        <?php else: ?>
+        <div class="admin-filter-bar" data-filter-target="contractBillsTable">
+            <div class="admin-filter-field">
+                <label for="detailBillMonth">Tháng</label>
+                <select id="detailBillMonth" class="form-select form-select-sm" data-filter-key="month">
+                    <option value="">Tất cả tháng</option>
+                    <?php foreach ($detailBillMonths as $month): ?>
+                        <option value="<?= Security::e($month); ?>">Tháng <?= Security::e($month); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-filter-field">
+                <label for="detailBillYear">Năm</label>
+                <select id="detailBillYear" class="form-select form-select-sm" data-filter-key="year">
+                    <option value="">Tất cả năm</option>
+                    <?php foreach ($detailBillYears as $year): ?>
+                        <option value="<?= Security::e($year); ?>"><?= Security::e($year); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-filter-field">
+                <label for="detailBillStatus">Trạng thái</label>
+                <select id="detailBillStatus" class="form-select form-select-sm" data-filter-key="status">
+                    <option value="">Tất cả trạng thái</option>
+                    <?php foreach ($detailBillStatuses as $status): ?>
+                        <option value="<?= Security::e($status); ?>"><?= Security::e($status); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-filter-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
+            </div>
+        </div>
         <div class="table-responsive">
-            <table class="table table-sm align-middle">
+            <table id="contractBillsTable" class="table datatable table-sm align-middle">
                 <thead><tr><th>Tháng</th><th>Số tiền</th><th>Trạng thái</th></tr></thead>
                 <tbody>
                 <?php foreach ($bills as $b): ?>
-                    <tr>
+                    <tr data-month="<?= Security::e((string) $b['billing_month']); ?>"
+                        data-year="<?= Security::e((string) $b['billing_year']); ?>"
+                        data-status="<?= Security::e((string) $b['status']); ?>">
                         <td><?= Security::e((string)$b['billing_month']); ?>/<?= Security::e((string)$b['billing_year']); ?></td>
                         <td><?= number_format((float)$b['total_amount'],0,',','.'); ?> đ</td>
                         <td><?= Security::e((string)$b['status']); ?></td>
@@ -65,6 +111,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                 </tbody>
             </table>
         </div>
+        <?php endif; ?>
     </div>
     
     <div class="mt-4 card card-glass p-4 border-0 shadow-sm">
@@ -166,6 +213,11 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 <script>
 document.getElementById('saveDetailBtn').addEventListener('click', async () => {
     const form = document.getElementById('detailForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
     const data = Object.fromEntries(new FormData(form));
     try {
         const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/save.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });

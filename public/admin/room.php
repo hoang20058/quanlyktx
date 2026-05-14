@@ -18,6 +18,10 @@ if (!$room) {
 }
 
 $students = RoomRepository::studentsByRoom($roomId);
+$roomDepartments = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['department'] ?? ''), $students))));
+sort($roomDepartments);
+$roomContractStatuses = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['status'] ?? ''), $students))));
+sort($roomContractStatuses);
 $pageTitle = 'Phòng P' . Security::e((string) $room['room_number']) . ' - ' . APP_NAME;
 $activeMenu = 'rooms';
 
@@ -69,7 +73,39 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     <div class="panel-glass rounded-4 p-4 p-lg-5">
         <h3 class="mb-4">Danh sách sinh viên trong phòng</h3>
         <?php if (count($students) > 0): ?>
-            <table class="table table-hover align-middle">
+            <div class="admin-filter-bar" data-filter-target="roomStudentsTable">
+                <div class="admin-filter-field">
+                    <label for="roomStudentDepartment">Khoa</label>
+                    <select id="roomStudentDepartment" class="form-select form-select-sm" data-filter-key="department">
+                        <option value="">Tất cả khoa</option>
+                        <?php foreach ($roomDepartments as $department): ?>
+                            <option value="<?= Security::e($department); ?>"><?= Security::e($department); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="admin-filter-field">
+                    <label for="roomStudentScore">Điểm nội trú</label>
+                    <select id="roomStudentScore" class="form-select form-select-sm" data-filter-key="scoreBand">
+                        <option value="">Tất cả điểm</option>
+                        <option value="high">Tốt (>= 80)</option>
+                        <option value="medium">Ổn định (60-79)</option>
+                        <option value="low">Cần theo dõi (&lt; 60)</option>
+                    </select>
+                </div>
+                <div class="admin-filter-field">
+                    <label for="roomStudentStatus">Trạng thái HĐ</label>
+                    <select id="roomStudentStatus" class="form-select form-select-sm" data-filter-key="status">
+                        <option value="">Tất cả trạng thái</option>
+                        <?php foreach ($roomContractStatuses as $status): ?>
+                            <option value="<?= Security::e($status); ?>"><?= Security::e($status); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="admin-filter-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
+                </div>
+            </div>
+            <table id="roomStudentsTable" class="table datatable table-hover align-middle">
                 <thead>
                 <tr>
                     <th>Mã SV</th>
@@ -82,7 +118,13 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                 </thead>
                 <tbody>
                 <?php foreach ($students as $s): ?>
-                    <tr>
+                    <?php
+                    $studentScore = (int) ($s['boarding_score'] ?? 0);
+                    $studentScoreBand = $studentScore >= 80 ? 'high' : ($studentScore >= 60 ? 'medium' : 'low');
+                    ?>
+                    <tr data-department="<?= Security::e((string) $s['department']); ?>"
+                        data-score-band="<?= Security::e($studentScoreBand); ?>"
+                        data-status="<?= Security::e((string) $s['status']); ?>">
                         <td class="fw-semibold"><?= Security::e((string) $s['student_code']); ?></td>
                         <td><?= Security::e((string) $s['full_name']); ?></td>
                         <td><?= Security::e((string) $s['department']); ?></td>

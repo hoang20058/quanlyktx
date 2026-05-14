@@ -10,6 +10,18 @@ $activeMenu = 'students';
 
 $students = StudentRepository::all();
 $rooms = RoomRepository::selectOptions();
+$livingStudents = array_values(array_filter($students, static fn (array $student): bool => (($student['display_status'] ?? $student['status'] ?? '') === 'Đang ở')));
+$pendingStudents = array_values(array_filter($students, static fn (array $student): bool => (($student['display_status'] ?? $student['status'] ?? '') === 'Chờ duyệt')));
+$livingDepartments = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['department'] ?? ''), $livingStudents))));
+sort($livingDepartments);
+$livingRooms = array_values(array_unique(array_filter(array_map(static fn (array $student): string => !empty($student['room_number']) ? 'P' . (string) $student['room_number'] : '', $livingStudents))));
+sort($livingRooms);
+$livingPriorities = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['priority_level'] ?? ''), $livingStudents), static fn (string $value): bool => $value !== '')));
+sort($livingPriorities, SORT_NUMERIC);
+$pendingDepartments = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['department'] ?? ''), $pendingStudents))));
+sort($pendingDepartments);
+$pendingPriorities = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['priority_level'] ?? ''), $pendingStudents), static fn (string $value): bool => $value !== '')));
+sort($pendingPriorities, SORT_NUMERIC);
 
 require_once __DIR__ . '/../../views/partials/admin_header.php';
 ?>
@@ -25,7 +37,48 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     </div>
 
     <h4>Sinh viên đang ở</h4>
-    <table class="table datatable table-hover align-middle">
+    <div class="admin-filter-bar" data-filter-target="livingStudentsTable">
+        <div class="admin-filter-field">
+            <label for="livingFilterDepartment">Ngành / Khoa</label>
+            <select id="livingFilterDepartment" class="form-select form-select-sm" data-filter-key="department">
+                <option value="">Tất cả ngành</option>
+                <?php foreach ($livingDepartments as $department): ?>
+                    <option value="<?= Security::e($department); ?>"><?= Security::e($department); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="livingFilterRoom">Phòng</label>
+            <select id="livingFilterRoom" class="form-select form-select-sm" data-filter-key="room">
+                <option value="">Tất cả phòng</option>
+                <?php foreach ($livingRooms as $roomNumber): ?>
+                    <option value="<?= Security::e($roomNumber); ?>"><?= Security::e($roomNumber); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="livingFilterPriority">Ưu tiên</label>
+            <select id="livingFilterPriority" class="form-select form-select-sm" data-filter-key="priority">
+                <option value="">Tất cả mức</option>
+                <?php foreach ($livingPriorities as $priority): ?>
+                    <option value="<?= Security::e($priority); ?>">Mức <?= Security::e($priority); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="livingFilterScore">Điểm nội trú</label>
+            <select id="livingFilterScore" class="form-select form-select-sm" data-filter-key="scoreBand">
+                <option value="">Tất cả điểm</option>
+                <option value="high">Tốt (>= 80)</option>
+                <option value="medium">Ổn định (60-79)</option>
+                <option value="low">Cần theo dõi (&lt; 60)</option>
+            </select>
+        </div>
+        <div class="admin-filter-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
+        </div>
+    </div>
+    <table id="livingStudentsTable" class="table datatable table-hover align-middle">
         <thead>
         <tr>
             <th>Mã SV</th>
@@ -38,8 +91,16 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         </tr>
         </thead>
         <tbody>
-        <?php foreach ($students as $row): if (($row['display_status'] ?? $row['status']) !== 'Đang ở') continue; ?>
-            <tr>
+        <?php foreach ($livingStudents as $row): ?>
+            <?php
+            $livingRoomNumber = !empty($row['room_number']) ? 'P' . (string) $row['room_number'] : '';
+            $studentScore = (int) ($row['boarding_score'] ?? 0);
+            $studentScoreBand = $studentScore >= 80 ? 'high' : ($studentScore >= 60 ? 'medium' : 'low');
+            ?>
+            <tr data-department="<?= Security::e((string) $row['department']); ?>"
+                data-room="<?= Security::e($livingRoomNumber); ?>"
+                data-priority="<?= Security::e((string) $row['priority_level']); ?>"
+                data-score-band="<?= Security::e($studentScoreBand); ?>">
                 <td class="fw-semibold"><?= Security::e((string) $row['student_code']); ?></td>
                 <td><?= Security::e((string) $row['full_name']); ?></td>
                 <td><?= Security::e((string) $row['department']); ?></td>
@@ -81,11 +142,35 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 
     <div class="mt-5">
         <h4>Hồ sơ chờ duyệt</h4>
-        <table class="table table-sm table-hover align-middle">
+        <div class="admin-filter-bar" data-filter-target="pendingStudentsTable">
+            <div class="admin-filter-field">
+                <label for="pendingFilterDepartment">Ngành / Khoa</label>
+                <select id="pendingFilterDepartment" class="form-select form-select-sm" data-filter-key="department">
+                    <option value="">Tất cả ngành</option>
+                    <?php foreach ($pendingDepartments as $department): ?>
+                        <option value="<?= Security::e($department); ?>"><?= Security::e($department); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-filter-field">
+                <label for="pendingFilterPriority">Ưu tiên</label>
+                <select id="pendingFilterPriority" class="form-select form-select-sm" data-filter-key="priority">
+                    <option value="">Tất cả mức</option>
+                    <?php foreach ($pendingPriorities as $priority): ?>
+                        <option value="<?= Security::e($priority); ?>">Mức <?= Security::e($priority); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-filter-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
+            </div>
+        </div>
+        <table id="pendingStudentsTable" class="table datatable table-sm table-hover align-middle">
             <thead><tr><th>Mã SV</th><th>Họ tên</th><th>Ngành</th><th>Ưu tiên</th><th>Thao tác</th></tr></thead>
             <tbody>
-            <?php foreach ($students as $row): if (($row['display_status'] ?? $row['status']) !== 'Chờ duyệt') continue; ?>
-                <tr>
+            <?php foreach ($pendingStudents as $row): ?>
+                <tr data-department="<?= Security::e((string) $row['department']); ?>"
+                    data-priority="<?= Security::e((string) $row['priority_level']); ?>">
                     <td class="fw-semibold"><?= Security::e((string) $row['student_code']); ?></td>
                     <td><?= Security::e((string) $row['full_name']); ?></td>
                     <td><?= Security::e((string) $row['department']); ?></td>
@@ -95,6 +180,21 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                         </span>
                     </td>
                     <td>
+                        <button class="btn btn-sm btn-outline-primary btn-edit-student"
+                                data-bs-toggle="modal"
+                                data-bs-target="#studentModal"
+                                data-student-id="<?= Security::e((string) $row['student_id']); ?>"
+                                data-full-name="<?= Security::e((string) $row['full_name']); ?>"
+                                data-student-code="<?= Security::e((string) $row['student_code']); ?>"
+                                data-dob="<?= Security::e((string) $row['dob']); ?>"
+                                data-phone="<?= Security::e((string) $row['phone']); ?>"
+                                data-email="<?= Security::e((string) $row['email']); ?>"
+                                data-department="<?= Security::e((string) $row['department']); ?>"
+                                data-status="<?= Security::e((string) $row['status']); ?>"
+                                data-priority-level="<?= Security::e((string) $row['priority_level']); ?>"
+                                data-boarding-score="<?= Security::e((string) $row['boarding_score']); ?>">
+                            Sửa
+                        </button>
                         <button class="btn btn-sm btn-success btn-approve-student" data-student-id="<?= Security::e((string) $row['student_id']); ?>" data-student-name="<?= Security::e((string) $row['full_name']); ?>">Duyệt</button>
                     </td>
                 </tr>
@@ -264,7 +364,8 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         
         // Hàm cập nhật hiển thị điểm
         const updateScoreDisplay = () => {
-            const current = parseInt(boardingScoreField.value) || 100;
+            const parsedScore = parseInt(boardingScoreField.value);
+            const current = Number.isNaN(parsedScore) ? 100 : parsedScore;
             displayScore.textContent = current;
             // Cập nhật màu sắc
             if (current >= 80) {
@@ -346,6 +447,11 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 
         // Validation email và student_code trước submit
         document.getElementById('saveStudentBtn').addEventListener('click', async () => {
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
             const formData = new FormData(form);
             const email = formData.get('email');
             const studentCode = formData.get('student_code');

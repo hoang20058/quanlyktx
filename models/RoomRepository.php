@@ -58,8 +58,12 @@ final class RoomRepository
         $db = Database::connection();
         $roomId = (int) ($data['room_id'] ?? 0);
         $floor = (int) ($data['floor_number'] ?? 0);
-        $roomSeq = (int) ($data['room_sequence'] ?? ($data['room_number'] ?? 0));
-        $roomNum = $floor * 100 + $roomSeq;
+        $roomSeq = self::resolveRoomSequence($data, $floor);
+        $roomNum = ($floor * 100) + $roomSeq;
+
+        if ($floor < 1 || $roomSeq < 1 || $roomSeq > 99) {
+            throw new InvalidArgumentException('Invalid floor or room sequence.');
+        }
         
         $payload = [
             ':room_number' => $roomNum,
@@ -83,6 +87,29 @@ final class RoomRepository
         $stmt = $db->prepare($sql);
         $stmt->execute($payload);
         return (int) $db->lastInsertId();
+    }
+
+    private static function resolveRoomSequence(array $data, int $floor): int
+    {
+        if (array_key_exists('room_sequence', $data) && $data['room_sequence'] !== '') {
+            return (int) $data['room_sequence'];
+        }
+
+        if (!array_key_exists('room_number', $data) || $data['room_number'] === '') {
+            return 0;
+        }
+
+        $roomNumber = (int) $data['room_number'];
+        if ($roomNumber <= 99) {
+            return $roomNumber;
+        }
+
+        $numberFloor = intdiv($roomNumber, 100);
+        if ($floor > 0 && $numberFloor !== $floor) {
+            throw new InvalidArgumentException('Room number does not match floor number.');
+        }
+
+        return $roomNumber % 100;
     }
 
     public static function delete(int $roomId): bool

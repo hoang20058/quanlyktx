@@ -7,7 +7,7 @@ final class Api
     public static function boot(): void
     {
         require_once __DIR__ . '/../config/app.php';
-        Security::requireAuth();
+        Security::requireAdminAuth();
     }
 
     public static function json(array $payload, int $statusCode = 200): void

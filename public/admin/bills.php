@@ -10,6 +10,14 @@ $activeMenu = 'bills';
 
 $bills = UtilityBillRepository::all();
 $rooms = RoomRepository::selectOptions();
+$billRooms = array_values(array_unique(array_filter(array_map(static fn (array $bill): string => !empty($bill['room_number']) ? 'P' . (string) $bill['room_number'] : '', $bills))));
+sort($billRooms);
+$billStatuses = array_values(array_unique(array_filter(array_map(static fn (array $bill): string => (string) ($bill['status'] ?? ''), $bills))));
+sort($billStatuses);
+$billMonths = array_values(array_unique(array_filter(array_map(static fn (array $bill): string => (string) ($bill['billing_month'] ?? ''), $bills), static fn (string $value): bool => $value !== '')));
+sort($billMonths, SORT_NUMERIC);
+$billYears = array_values(array_unique(array_filter(array_map(static fn (array $bill): string => (string) ($bill['billing_year'] ?? ''), $bills), static fn (string $value): bool => $value !== '')));
+sort($billYears, SORT_NUMERIC);
 
 require_once __DIR__ . '/../../views/partials/admin_header.php';
 ?>
@@ -26,7 +34,49 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         </div>
     </div>
 
-    <table class="table datatable table-hover align-middle">
+    <div class="admin-filter-bar" data-filter-target="billsTable">
+        <div class="admin-filter-field">
+            <label for="billFilterRoom">Phòng</label>
+            <select id="billFilterRoom" class="form-select form-select-sm" data-filter-key="room">
+                <option value="">Tất cả phòng</option>
+                <?php foreach ($billRooms as $roomNumber): ?>
+                    <option value="<?= Security::e($roomNumber); ?>"><?= Security::e($roomNumber); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="billFilterMonth">Tháng</label>
+            <select id="billFilterMonth" class="form-select form-select-sm" data-filter-key="month">
+                <option value="">Tất cả tháng</option>
+                <?php foreach ($billMonths as $month): ?>
+                    <option value="<?= Security::e($month); ?>">Tháng <?= Security::e($month); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="billFilterYear">Năm</label>
+            <select id="billFilterYear" class="form-select form-select-sm" data-filter-key="year">
+                <option value="">Tất cả năm</option>
+                <?php foreach ($billYears as $year): ?>
+                    <option value="<?= Security::e($year); ?>"><?= Security::e($year); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="billFilterStatus">Trạng thái</label>
+            <select id="billFilterStatus" class="form-select form-select-sm" data-filter-key="status">
+                <option value="">Tất cả trạng thái</option>
+                <?php foreach ($billStatuses as $status): ?>
+                    <option value="<?= Security::e($status); ?>"><?= Security::e($status); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
+        </div>
+    </div>
+
+    <table id="billsTable" class="table datatable table-hover align-middle">
         <thead>
         <tr>
             <th>Phòng</th>
@@ -38,11 +88,18 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         </thead>
         <tbody>
         <?php foreach ($bills as $bill): ?>
-            <tr>
+            <?php
+            $billRoomNumber = !empty($bill['room_number']) ? 'P' . (string) $bill['room_number'] : '';
+            $billStatus = (string) ($bill['status'] ?? '');
+            ?>
+            <tr data-room="<?= Security::e($billRoomNumber); ?>"
+                data-month="<?= Security::e((string) $bill['billing_month']); ?>"
+                data-year="<?= Security::e((string) $bill['billing_year']); ?>"
+                data-status="<?= Security::e($billStatus); ?>">
                 <td class="fw-semibold">P<?= Security::e((string) $bill['room_number']); ?></td>
                 <td><?= Security::e((string) $bill['billing_month']); ?>/<?= Security::e((string) $bill['billing_year']); ?></td>
                 <td><?= number_format((float) $bill['total_amount'], 0, ',', '.'); ?> đ</td>
-                <td><span class="badge <?= $bill['status'] === 'Đã thanh toán' ? 'text-bg-success' : 'text-bg-warning'; ?>"><?= Security::e((string) $bill['status']); ?></span></td>
+                <td><span class="badge <?= $billStatus === 'Đã thanh toán' ? 'text-bg-success' : 'text-bg-warning'; ?>"><?= Security::e((string) $bill['status']); ?></span></td>
                 <td>
                     <div class="d-flex gap-2 flex-wrap">
                         <?php if ($bill['status'] !== 'Đã thanh toán'): ?>
@@ -131,6 +188,36 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 
     bindDelete('.btn-delete-bill', '/api/bills/delete.php', 'data-bill-id', 'bill_id');
 
+    const billForm = document.getElementById('billForm');
+    const billModal = document.getElementById('billModal');
+
+    const fillBillForm = (button) => {
+        if (!billForm) return;
+
+        billForm.querySelector('[name="bill_id"]').value = button.dataset.billId || '0';
+        billForm.querySelector('[name="room_id"]').value = button.dataset.roomId || '';
+        billForm.querySelector('[name="billing_month"]').value = button.dataset.billingMonth || '';
+        billForm.querySelector('[name="billing_year"]').value = button.dataset.billingYear || '';
+        billForm.querySelector('[name="total_amount"]').value = button.dataset.totalAmount || '';
+        billForm.querySelector('[name="status"]').value = button.dataset.status || 'Chưa thanh toán';
+    };
+
+    document.querySelectorAll('.btn-edit-bill').forEach((button) => {
+        button.addEventListener('click', () => fillBillForm(button));
+    });
+
+    billModal?.addEventListener('show.bs.modal', (event) => {
+        if (!billForm) return;
+
+        const trigger = event.relatedTarget;
+        if (trigger && trigger.getAttribute('data-bill-id') === '0') {
+            billForm.reset();
+            billForm.querySelector('[name="bill_id"]').value = '0';
+            billForm.querySelector('[name="billing_month"]').value = String(new Date().getMonth() + 1);
+            billForm.querySelector('[name="billing_year"]').value = String(new Date().getFullYear());
+        }
+    });
+
     document.querySelectorAll('.btn-mark-paid').forEach((button) => {
         button.addEventListener('click', async () => {
             const billId = button.getAttribute('data-bill-id');
@@ -158,6 +245,11 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     if (saveBillBtn) {
         saveBillBtn.addEventListener('click', async () => {
             const form = document.getElementById('billForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
             const data = new FormData(form);
             
             try {

@@ -13,6 +13,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiUrl = (path) => (window.APP_BASE_URL || '') + path;
 
     if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
+        if (!window.__adminTableFiltersRegistered) {
+            window.jQuery.fn.dataTable.ext.search.push((settings, data, dataIndex) => {
+                const tableId = settings.nTable?.id || '';
+                if (!tableId) return true;
+
+                const filterBar = document.querySelector(`[data-filter-target="${tableId}"]`);
+                if (!filterBar) return true;
+
+                const row = settings.aoData?.[dataIndex]?.nTr;
+                if (!row) return true;
+
+                return Array.from(filterBar.querySelectorAll('[data-filter-key]')).every((control) => {
+                    if (control.disabled) return true;
+
+                    const selectedValue = String(control.value || '').trim();
+                    if (!selectedValue) return true;
+
+                    const key = control.dataset.filterKey;
+                    const filterType = control.dataset.filterType || 'equals';
+                    const rowValue = String(row.dataset[key] || '').trim();
+
+                    if (filterType === 'contains') {
+                        return rowValue.toLocaleLowerCase('vi-VN').includes(selectedValue.toLocaleLowerCase('vi-VN'));
+                    }
+
+                    if (filterType === 'min') {
+                        return Number(rowValue || 0) >= Number(selectedValue);
+                    }
+
+                    if (filterType === 'max') {
+                        return Number(rowValue || 0) <= Number(selectedValue);
+                    }
+
+                    return rowValue === selectedValue;
+                });
+            });
+
+            window.__adminTableFiltersRegistered = true;
+        }
+
         window.jQuery(dataTableSelector).each(function () {
             const table = window.jQuery(this);
 
@@ -29,6 +69,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             }
+        });
+
+        document.querySelectorAll('[data-filter-target]').forEach((filterBar) => {
+            const targetId = filterBar.dataset.filterTarget;
+            const table = targetId ? document.getElementById(targetId) : null;
+            if (!table) return;
+
+            const redraw = () => {
+                if (window.jQuery.fn.DataTable.isDataTable(table)) {
+                    window.jQuery(table).DataTable().draw();
+                }
+            };
+
+            filterBar.querySelectorAll('[data-filter-key]').forEach((control) => {
+                control.addEventListener('change', redraw);
+                control.addEventListener('input', redraw);
+            });
+
+            filterBar.querySelectorAll('[data-filter-clear]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    filterBar.querySelectorAll('[data-filter-key]').forEach((control) => {
+                        control.value = '';
+                    });
+                    redraw();
+                });
+            });
         });
     }
 
@@ -78,48 +144,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    roomForm?.querySelectorAll('.form-room-input').forEach((element) => {
-        element.addEventListener('input', updateRoomNumberDisplay);
-    });
+    const bindRoomNumberPreview = () => {
+        if (!roomForm) return;
+
+        roomForm.querySelectorAll('.form-room-input').forEach((element) => {
+            element.addEventListener('input', updateRoomNumberDisplay);
+            element.addEventListener('change', updateRoomNumberDisplay);
+            element.addEventListener('keyup', updateRoomNumberDisplay);
+            element.addEventListener('paste', () => setTimeout(updateRoomNumberDisplay, 0));
+        });
+
+        updateRoomNumberDisplay();
+    };
+
+    bindRoomNumberPreview();
 
     document.querySelectorAll('.btn-edit-room').forEach((btn) => {
         btn.addEventListener('click', () => {
             if (!roomForm || !roomModal) return;
             populateForm(roomForm, {
                 room_id: btn.dataset.roomId,
-                room_number: btn.dataset.roomNumber,
                 floor_number: btn.dataset.floorNumber,
+                room_sequence: btn.dataset.roomSequence,
                 capacity: btn.dataset.capacity,
                 room_type: btn.dataset.roomType,
                 status: btn.dataset.status,
                 price: btn.dataset.price,
             });
 
-            const roomNumber = parseInt(btn.dataset.roomNumber || '0', 10);
-            const roomSequence = roomNumber > 0 ? roomNumber % 100 : 0;
-            if (roomSequenceInput) {
+            if (roomSequenceInput && !roomSequenceInput.value) {
+                const roomNumber = parseInt(btn.dataset.roomNumber || '0', 10);
+                const floorNumber = parseInt(btn.dataset.floorNumber || '0', 10);
+                const roomSequence = roomNumber > 0 && floorNumber > 0 ? roomNumber - (floorNumber * 100) : 0;
                 roomSequenceInput.value = roomSequence > 0 ? String(roomSequence) : '';
             }
             updateRoomNumberDisplay();
         });
     });
-    roomModal?.addEventListener('show.bs.modal', (event) => {
-            if (!roomForm) return;
+    if (roomModal) {
+        roomModal.addEventListener('show.bs.modal', (event) => {
+            if (!roomForm) {
+                return;
+            }
+
             const trigger = event.relatedTarget;
             if (trigger && trigger.getAttribute('data-room-id') === '0') {
                 roomForm.reset();
                 const hidden = roomForm.querySelector('[name="room_id"]');
                 if (hidden) hidden.value = '0';
             }
+
             updateRoomNumberDisplay();
-        }
-    });
+        });
+    }
 
     const studentForm = document.getElementById('studentForm');
     const studentModal = document.getElementById('studentModal');
+    const studentModalTitle = studentModal?.querySelector('.modal-title');
+    const updateStudentScoreDisplay = (score) => {
+        const parsedScore = parseInt(score ?? '100', 10);
+        const scoreValue = Number.isNaN(parsedScore) ? 100 : parsedScore;
+        const scoreInput = studentForm?.querySelector('[name="boarding_score"]');
+        const scoreDisplay = document.getElementById('displayBoardingScore');
+
+        if (scoreInput) {
+            scoreInput.value = String(scoreValue);
+        }
+
+        if (scoreDisplay) {
+            scoreDisplay.textContent = String(scoreValue);
+            scoreDisplay.style.color = scoreValue >= 80 ? '#198754' : (scoreValue >= 60 ? '#0d6efd' : (scoreValue >= 40 ? '#ff9800' : '#dc3545'));
+        }
+    };
+
     document.querySelectorAll('.btn-edit-student').forEach((btn) => {
         btn.addEventListener('click', () => {
             if (!studentForm) return;
+
             populateForm(studentForm, {
                 student_id: btn.dataset.studentId,
                 student_code: btn.dataset.studentCode,
@@ -132,6 +233,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 priority_level: btn.dataset.priorityLevel,
                 boarding_score: btn.dataset.boardingScore,
             });
+
+            updateStudentScoreDisplay(btn.dataset.boardingScore);
+            if (studentModalTitle) {
+                studentModalTitle.textContent = btn.dataset.fullName ? `Sửa sinh viên: ${btn.dataset.fullName}` : 'Sửa sinh viên';
+            }
         });
     });
     studentModal?.addEventListener('show.bs.modal', (event) => {
@@ -141,11 +247,90 @@ document.addEventListener('DOMContentLoaded', () => {
             studentForm.reset();
             const hidden = studentForm.querySelector('[name="student_id"]');
             if (hidden) hidden.value = '0';
+            updateStudentScoreDisplay('100');
+            if (studentModalTitle) {
+                studentModalTitle.textContent = 'Thêm sinh viên';
+            }
         }
     });
 
     const noticeForm = document.getElementById('noticeForm');
     const noticeModal = document.getElementById('noticeModal');
+    const noticeTargetInput = noticeForm?.querySelector('[name="target_type"]');
+    const noticePointInput = noticeForm?.querySelector('[name="point_change"]');
+    const noticeRoomInput = noticeForm?.querySelector('[name="room_id"]');
+    const noticeStudentInput = noticeForm?.querySelector('[name="student_id"]');
+
+    const noticeMode = () => noticeTargetInput?.selectedOptions?.[0]?.dataset.mode || 'building';
+
+    const filterNoticeStudents = (preferredStudentId = '') => {
+        if (!noticeStudentInput) return;
+
+        const roomId = noticeRoomInput?.value || '';
+        const selectedStudentId = preferredStudentId || noticeStudentInput.value || '';
+        let selectedStudentStillVisible = false;
+        let roomHasStudents = false;
+        const placeholder = noticeStudentInput.querySelector('option[value=""]');
+
+        noticeStudentInput.querySelectorAll('option').forEach((option) => {
+            if (!option.value) {
+                option.hidden = false;
+                option.disabled = false;
+                return;
+            }
+
+            const matchesRoom = roomId !== '' && option.dataset.roomId === roomId;
+            option.hidden = !matchesRoom;
+            option.disabled = !matchesRoom;
+            option.style.display = matchesRoom ? '' : 'none';
+
+            if (matchesRoom) {
+                roomHasStudents = true;
+            }
+
+            if (matchesRoom && option.value === selectedStudentId) {
+                selectedStudentStillVisible = true;
+            }
+        });
+
+        if (placeholder) {
+            placeholder.textContent = roomId ? (roomHasStudents ? '-- Chọn sinh viên --' : '-- Phòng này chưa có sinh viên --') : '-- Chọn phòng trước --';
+        }
+
+        noticeStudentInput.value = selectedStudentStillVisible ? selectedStudentId : '';
+    };
+
+    const syncNoticeForm = (preferredStudentId = '') => {
+        if (!noticeForm || !noticeTargetInput || !noticePointInput || !noticeRoomInput || !noticeStudentInput) return;
+
+        const mode = noticeMode();
+        const isBuildingTarget = mode === 'building';
+        const isRoomTarget = mode === 'room';
+        const isStudentTarget = mode === 'student';
+
+        noticeRoomInput.disabled = isBuildingTarget;
+        noticeRoomInput.required = isRoomTarget || isStudentTarget;
+        if (isBuildingTarget) {
+            noticeRoomInput.value = '';
+        }
+
+        noticePointInput.disabled = !isStudentTarget;
+        if (!isStudentTarget) {
+            noticePointInput.value = '0';
+        }
+
+        filterNoticeStudents(preferredStudentId);
+
+        noticeStudentInput.disabled = !isStudentTarget || !noticeRoomInput.value;
+        noticeStudentInput.required = isStudentTarget;
+        if (!isStudentTarget || noticeStudentInput.disabled) {
+            noticeStudentInput.value = '';
+        }
+    };
+
+    noticeTargetInput?.addEventListener('change', () => syncNoticeForm());
+    noticeRoomInput?.addEventListener('change', () => syncNoticeForm());
+
     document.querySelectorAll('.btn-edit-notice').forEach((btn) => {
         btn.addEventListener('click', () => {
             if (!noticeForm) return;
@@ -159,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 description: btn.dataset.description,
                 date: btn.dataset.date,
             });
+            syncNoticeForm(btn.dataset.studentId);
         });
     });
     noticeModal?.addEventListener('show.bs.modal', (event) => {
@@ -168,8 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
             noticeForm.reset();
             const hidden = noticeForm.querySelector('[name="notice_id"]');
             if (hidden) hidden.value = '0';
+            syncNoticeForm();
         }
     });
+    syncNoticeForm();
 
     document.querySelectorAll('.btn-switch-room').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -226,6 +414,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!button || !form) return;
 
         button.addEventListener('click', async () => {
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
             const fd = new FormData(form);
             const data = Object.fromEntries(fd.entries());
 
@@ -249,7 +442,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     bindSave('saveRoomBtn', 'roomForm', '/api/rooms/save.php');
-    bindSave('saveStudentBtn', 'studentForm', '/api/students/save.php');
     bindSave('saveNoticeBtn', 'noticeForm', '/api/notices/save.php');
 
     const bindDelete = (selector, endpoint, idKey, payloadKey) => {

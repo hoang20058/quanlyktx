@@ -14,7 +14,7 @@ $pageTitle = $pageTitle ?? APP_NAME;
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="<?= Security::e(APP_BASE_URL); ?>/assets/css/app.css?v=1.1" rel="stylesheet">
+    <link href="<?= Security::e(APP_BASE_URL); ?>/assets/css/app.css?v=1.3" rel="stylesheet">
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-glass sticky-top py-3 mb-4">

@@ -17,7 +17,7 @@ $currentUser = Security::admin();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="<?= Security::e(APP_BASE_URL); ?>/assets/css/app.css?v=1.1" rel="stylesheet">
+    <link href="<?= Security::e(APP_BASE_URL); ?>/assets/css/app.css?v=1.3" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -60,23 +60,9 @@ $currentUser = Security::admin();
                                 <h1 class="h4 mb-0 fw-bold"><?= Security::e($pageTitle); ?></h1>
                             </div>
                             <div class="right ms-auto d-flex align-items-center gap-2">
-                                <div class="input-group topbar-search" style="max-width:720px; flex:1;">
-                                    <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search"></i></span>
-                                    <input type="search" class="form-control border-0 shadow-none bg-transparent" placeholder="Tìm kiếm...">
-                                </div>
                                 <a class="btn btn-light" href="../index.php" title="Trang chủ"><i class="bi bi-house"></i></a>
-                                <a class="btn btn-light" href="#" title="Thông báo"><i class="bi bi-bell"></i></a>
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <img src="https://i.pravatar.cc/28?u=admin" class="rounded-circle me-1" style="width:28px;height:28px;"> <span class="d-none d-sm-inline"><?= Security::e($currentUser['full_name'] ?? 'Admin'); ?></span>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="../index.php">Visit site</a></li>
-                                        <li><a class="dropdown-item" href="./profile.php">Tài khoản</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="<?= Security::e(APP_URL); ?>/logout.php">Đăng xuất</a></li>
-                                    </ul>
-                                </div>
+                                <a class="btn btn-light" href="./notices.php" title="Thông báo"><i class="bi bi-bell"></i></a>
+                                <a class="btn btn-outline-danger" href="<?= Security::e(APP_URL); ?>/logout.php" title="Đăng xuất"><i class="bi bi-box-arrow-right"></i></a>
                             </div>
                         </div>
             </div>

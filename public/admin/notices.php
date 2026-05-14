@@ -11,6 +11,10 @@ $activeMenu = 'notices';
 $notices = NoticeRepository::all();
 $rooms = RoomRepository::selectOptions();
 $students = StudentRepository::all();
+$noticeCategories = array_values(array_unique(array_filter(array_map(static fn (array $notice): string => (string) ($notice['category'] ?? ''), $notices))));
+sort($noticeCategories);
+$noticeTargets = array_values(array_unique(array_filter(array_map(static fn (array $notice): string => (string) ($notice['target_type'] ?? ''), $notices))));
+sort($noticeTargets);
 
 require_once __DIR__ . '/../../views/partials/admin_header.php';
 ?>
@@ -25,7 +29,40 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         </div>
     </div>
 
-    <table class="table datatable table-hover align-middle">
+    <div class="admin-filter-bar" data-filter-target="noticesTable">
+        <div class="admin-filter-field">
+            <label for="noticeFilterCategory">Loại</label>
+            <select id="noticeFilterCategory" class="form-select form-select-sm" data-filter-key="category">
+                <option value="">Tất cả loại</option>
+                <?php foreach ($noticeCategories as $category): ?>
+                    <option value="<?= Security::e($category); ?>"><?= Security::e($category); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="noticeFilterTarget">Đối tượng</label>
+            <select id="noticeFilterTarget" class="form-select form-select-sm" data-filter-key="target">
+                <option value="">Tất cả đối tượng</option>
+                <?php foreach ($noticeTargets as $target): ?>
+                    <option value="<?= Security::e($target); ?>"><?= Security::e($target); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="noticeFilterPoint">Ảnh hưởng điểm</label>
+            <select id="noticeFilterPoint" class="form-select form-select-sm" data-filter-key="pointState">
+                <option value="">Tất cả điểm</option>
+                <option value="positive">Cộng điểm</option>
+                <option value="negative">Trừ điểm</option>
+                <option value="zero">Không đổi điểm</option>
+            </select>
+        </div>
+        <div class="admin-filter-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
+        </div>
+    </div>
+
+    <table id="noticesTable" class="table datatable table-hover align-middle">
         <thead>
         <tr>
             <th>Ngày</th>
@@ -38,7 +75,13 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         </thead>
         <tbody>
         <?php foreach ($notices as $notice): ?>
-            <tr>
+            <?php
+            $noticePoint = (int) ($notice['point_change'] ?? 0);
+            $noticePointState = $noticePoint > 0 ? 'positive' : ($noticePoint < 0 ? 'negative' : 'zero');
+            ?>
+            <tr data-category="<?= Security::e((string) $notice['category']); ?>"
+                data-target="<?= Security::e((string) $notice['target_type']); ?>"
+                data-point-state="<?= Security::e($noticePointState); ?>">
                 <td><?= Security::e((string) $notice['date']); ?></td>
                 <td><?= Security::e((string) $notice['category']); ?></td>
                 <td>
@@ -94,9 +137,9 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                             <div class="col-md-4">
                                 <label class="form-label">Đối tượng</label>
                                 <select name="target_type" class="form-select">
-                                    <option value="Cả tòa">Cả tòa</option>
-                                    <option value="Phòng">Phòng</option>
-                                    <option value="Cá nhân">Cá nhân</option>
+                                    <option value="Cả tòa" data-mode="building">Cả tòa</option>
+                                    <option value="Phòng" data-mode="room">Phòng</option>
+                                    <option value="Cá nhân" data-mode="student">Cá nhân</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
@@ -125,7 +168,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                                 <select name="student_id" class="form-select">
                                     <option value="">-- Không chọn --</option>
                                     <?php foreach ($students as $student): ?>
-                                        <option value="<?= Security::e((string) $student['student_id']); ?>"><?= Security::e((string) $student['full_name']); ?></option>
+                                        <option value="<?= Security::e((string) $student['student_id']); ?>" data-room-id="<?= Security::e((string) ($student['room_id'] ?? '')); ?>"><?= Security::e((string) $student['full_name']); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>

@@ -11,6 +11,12 @@ $activeMenu = 'contracts';
 $contracts = ContractRepository::all();
 $students = StudentRepository::all();
 $rooms = RoomRepository::selectOptions();
+$contractStatuses = array_values(array_unique(array_filter(array_map(static fn (array $contract): string => (string) ($contract['status'] ?? ''), $contracts))));
+sort($contractStatuses);
+$contractRooms = array_values(array_unique(array_filter(array_map(static fn (array $contract): string => !empty($contract['room_number']) ? 'P' . (string) $contract['room_number'] : '', $contracts))));
+sort($contractRooms);
+$today = new DateTimeImmutable('today');
+$contractSoonLimit = $today->modify('+30 days');
 
 require_once __DIR__ . '/../../views/partials/admin_header.php';
 ?>
@@ -27,7 +33,49 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         </div>
     </div>
 
-    <table class="table datatable table-hover align-middle">
+    <div class="admin-filter-bar" data-filter-target="contractsTable">
+        <div class="admin-filter-field">
+            <label for="contractFilterStatus">Trạng thái</label>
+            <select id="contractFilterStatus" class="form-select form-select-sm" data-filter-key="status">
+                <option value="">Tất cả trạng thái</option>
+                <?php foreach ($contractStatuses as $status): ?>
+                    <option value="<?= Security::e($status); ?>"><?= Security::e($status); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="contractFilterRoom">Phòng</label>
+            <select id="contractFilterRoom" class="form-select form-select-sm" data-filter-key="room">
+                <option value="">Tất cả phòng</option>
+                <?php foreach ($contractRooms as $roomNumber): ?>
+                    <option value="<?= Security::e($roomNumber); ?>"><?= Security::e($roomNumber); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="contractFilterDebt">Công nợ</label>
+            <select id="contractFilterDebt" class="form-select form-select-sm" data-filter-key="debtState">
+                <option value="">Tất cả công nợ</option>
+                <option value="debt">Còn nợ</option>
+                <option value="clear">Đã tất toán</option>
+            </select>
+        </div>
+        <div class="admin-filter-field">
+            <label for="contractFilterExpiry">Hạn hợp đồng</label>
+            <select id="contractFilterExpiry" class="form-select form-select-sm" data-filter-key="expiryState">
+                <option value="">Tất cả hạn</option>
+                <option value="open">Không ngày ra</option>
+                <option value="active">Còn hạn</option>
+                <option value="soon">Sắp hết hạn 30 ngày</option>
+                <option value="overdue">Quá hạn</option>
+            </select>
+        </div>
+        <div class="admin-filter-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
+        </div>
+    </div>
+
+    <table id="contractsTable" class="table datatable table-hover align-middle">
         <thead>
         <tr>
             <th>Sinh viên</th>
@@ -41,7 +89,31 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         </thead>
         <tbody>
         <?php foreach ($contracts as $contract): ?>
-            <tr>
+            <?php
+            $contractStatus = (string) ($contract['status'] ?? '');
+            $contractRoomNumber = !empty($contract['room_number']) ? 'P' . (string) $contract['room_number'] : '';
+            $contractDebt = (float) ($contract['debt'] ?? 0);
+            $contractDebtState = $contractDebt > 0 ? 'debt' : 'clear';
+            $contractExpiryState = 'open';
+            if (!empty($contract['end_date'])) {
+                try {
+                    $contractEndDate = new DateTimeImmutable((string) $contract['end_date']);
+                    if ($contractEndDate < $today) {
+                        $contractExpiryState = 'overdue';
+                    } elseif ($contractEndDate <= $contractSoonLimit) {
+                        $contractExpiryState = 'soon';
+                    } else {
+                        $contractExpiryState = 'active';
+                    }
+                } catch (Exception) {
+                    $contractExpiryState = 'open';
+                }
+            }
+            ?>
+            <tr data-status="<?= Security::e($contractStatus); ?>"
+                data-room="<?= Security::e($contractRoomNumber); ?>"
+                data-debt-state="<?= Security::e($contractDebtState); ?>"
+                data-expiry-state="<?= Security::e($contractExpiryState); ?>">
                 <td><?= Security::e((string) $contract['full_name']); ?></td>
                 <td>P<?= Security::e((string) $contract['room_number']); ?></td>
                 <td><?= Security::e((string) $contract['start_date']); ?></td>
@@ -92,11 +164,15 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                     <div class="col-12">
                         <div class="p-3 rounded-3 bg-light">
                             <div class="row g-2">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="small text-muted">Giảm giá</div>
                                     <div id="discountDisplay" class="fw-semibold">-</div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Tiền phòng</div>
+                                    <div id="priceDisplay" class="fw-semibold">-</div>
+                                </div>
+                                <div class="col-md-4">
                                     <div class="small text-muted">Công nợ</div>
                                     <div id="debtDisplay" class="fw-semibold text-danger">-</div>
                                 </div>
@@ -195,14 +271,24 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 
     const calculatePrice = () => {
         const form = document.getElementById('contractForm');
-        const studentSelect = form.student_id;
-        const roomSelect = form.room_id;
-        const startDateInput = form.start_date;
-        const endDateInput = form.end_date;
-        const depositInput = form.deposit;
+        if (!form) return;
 
-        const priorityLevel = parseInt(studentSelect.options[studentSelect.selectedIndex].getAttribute('data-priority') || '8');
-        const roomPrice = parseFloat(roomSelect.options[roomSelect.selectedIndex].getAttribute('data-price') || '0');
+        const studentSelect = form.querySelector('[name="student_id"]');
+        const roomSelect = form.querySelector('[name="room_id"]');
+        const startDateInput = form.querySelector('[name="start_date"]');
+        const endDateInput = form.querySelector('[name="end_date"]');
+        const discountDisplay = document.getElementById('discountDisplay');
+        const priceDisplay = document.getElementById('priceDisplay');
+        const debtDisplay = document.getElementById('debtDisplay');
+
+        if (!studentSelect || !roomSelect || !startDateInput || !endDateInput || !discountDisplay || !priceDisplay || !debtDisplay) {
+            return;
+        }
+
+        const selectedStudent = studentSelect.options[studentSelect.selectedIndex];
+        const selectedRoom = roomSelect.options[roomSelect.selectedIndex];
+        const priorityLevel = parseInt(selectedStudent?.getAttribute('data-priority') || '8');
+        const roomPrice = parseFloat(selectedRoom?.getAttribute('data-price') || '0');
         const startDate = startDateInput.value;
         const endDate = endDateInput.value;
         const deposit = 0; // deposit is no longer entered at contract creation; payments handled separately
@@ -219,29 +305,34 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                 const price = basePrice * (100 - discountPercent) / 100;
                 const debt = Math.max(0, price - deposit);
 
-                document.getElementById('discountDisplay').textContent = discountPercent + '%';
-                document.getElementById('priceDisplay').textContent = price.toLocaleString('vi-VN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' đ';
-                document.getElementById('debtDisplay').textContent = debt.toLocaleString('vi-VN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' đ';
+                discountDisplay.textContent = discountPercent + '%';
+                priceDisplay.textContent = price.toLocaleString('vi-VN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' đ';
+                debtDisplay.textContent = debt.toLocaleString('vi-VN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' đ';
             }
         } else {
-            document.getElementById('discountDisplay').textContent = discountPercent + '%';
-            document.getElementById('priceDisplay').textContent = '-';
-            document.getElementById('debtDisplay').textContent = '-';
+            discountDisplay.textContent = discountPercent + '%';
+            priceDisplay.textContent = '-';
+            debtDisplay.textContent = '-';
         }
     };
 
     const form = document.getElementById('contractForm');
     if (form) {
-        form.student_id.addEventListener('change', calculatePrice);
-        form.room_id.addEventListener('change', calculatePrice);
-        form.start_date.addEventListener('change', calculatePrice);
-        form.end_date.addEventListener('change', calculatePrice);
+        form.querySelector('[name="student_id"]')?.addEventListener('change', calculatePrice);
+        form.querySelector('[name="room_id"]')?.addEventListener('change', calculatePrice);
+        form.querySelector('[name="start_date"]')?.addEventListener('change', calculatePrice);
+        form.querySelector('[name="end_date"]')?.addEventListener('change', calculatePrice);
     }
 
     const saveBtn = document.getElementById('saveContractBtn');
     if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
             const form = document.getElementById('contractForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
             const data = new FormData(form);
 
             try {

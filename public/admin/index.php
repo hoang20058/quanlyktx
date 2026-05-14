@@ -148,7 +148,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         <div class="table-panel p-4 h-100">
             <div class="datatable-toolbar mb-3">
                 <div><div class="section-subtitle text-uppercase fw-semibold small">Hoạt động gần đây</div><h2 class="section-title mb-0">Danh sách phòng nổi bật</h2></div>
-                <div class="table-actions d-flex gap-2"><a class="btn btn-outline-dark" href="rooms.php"><i class="bi bi-grid-3x3-gap me-1"></i>Toàn bộ phòng</a></div>
             </div>
             <div class="admin-filter-bar" data-filter-target="dashboardTopRoomsTable">
                 <div class="admin-filter-field">
@@ -220,10 +219,4 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
             <h2 class="section-title mb-3">Xin chào, <?= Security::e($currentUser['full_name'] ?? 'Admin'); ?></h2>
             <div class="d-grid gap-3">
                 <div class="d-flex gap-3"><div class="icon-badge primary flex-shrink-0"><i class="bi bi-layout-sidebar-inset"></i></div><div><div class="fw-semibold">Sidebar cố định</div><div class="text-secondary">Menu chính luôn hiển thị để điều hướng nhanh.</div></div></div>
-                <div class="d-flex gap-3"><div class="icon-badge blue flex-shrink-0"><i class="bi bi-bell"></i></div><div><div class="fw-semibold">Thông báo nhanh</div><div class="text-secondary">Biểu tượng chuông trên header mở trực tiếp trang quản lý thông báo.</div></div></div>
-                <div class="d-flex gap-3"><div class="icon-badge amber flex-shrink-0"><i class="bi bi-table"></i></div><div><div class="fw-semibold">DataTables sẵn sàng</div><div class="text-secondary">Các danh sách có tìm kiếm, phân trang và bộ lọc riêng.</div></div></div>
-            </div>
-        </div>
-    </div>
-</div>
 <?php require_once __DIR__ . '/../../views/partials/admin_footer.php'; ?>

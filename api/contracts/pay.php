@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/app.php';
-Security::requireAuth();
+Security::requireAdminAuth();
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -21,9 +21,6 @@ try {
     }
     
     $data = $input;
-    if (!Security::verifyCsrfToken($data['csrf_token'] ?? null)) {
-        throw new RuntimeException('CSRF token không hợp lệ');
-    }
 
     $contractId = (int) ($data['contract_id'] ?? 0);
     $amount = (float) ($data['amount'] ?? 0);

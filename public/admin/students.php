@@ -116,7 +116,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                     <div class="col-lg-8">
                         <form id="studentForm" class="row g-3">
                             <input type="hidden" name="student_id" value="0">
-                            <?= Security::csrfField(); ?>
                             <input type="hidden" name="boarding_score" value="100">
                             <div class="col-md-4"><label class="form-label">Mã sinh viên</label><input name="student_code" class="form-control" type="text" placeholder="SV001"></div>
                             <div class="col-md-8"><label class="form-label">Họ và tên</label><input name="full_name" class="form-control" type="text" placeholder="Nguyễn Văn An" required></div>
@@ -216,7 +215,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <?= Security::csrfField(); ?>
                 </form>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button><button type="button" id="confirmApproveBtn" class="btn btn-success">Duyệt</button></div>

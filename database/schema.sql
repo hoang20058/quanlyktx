@@ -82,7 +82,8 @@ CREATE TABLE Room (
     capacity INT NOT NULL,
     room_type ENUM('Dịch vụ','Thường') DEFAULT 'Thường',
     status ENUM('Hoạt động','Đang sửa chữa') DEFAULT 'Hoạt động',
-    price DECIMAL(10,2) DEFAULT 0
+    price DECIMAL(10,2) DEFAULT 0,
+    room_image_url VARCHAR(255) NULL
 );
 
 -- 3) Contract table

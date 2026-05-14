@@ -4,35 +4,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/app.php';
 
-$pageTitle = 'Đăng ký nội trú - ' . APP_NAME;
+// User registration is no longer supported - only admin can register students via admin panel
+header('Location: ' . (getenv('APP_URL') ?: APP_URL) . '/');
+exit;
 
-$successMessage = '';
-$errorMessage = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $token = $_POST['csrf_token'] ?? null;
-        if (!Security::verifyCsrfToken($token)) {
-            throw new RuntimeException('CSRF token không hợp lệ.');
-        }
-
-        $studentId = StudentRepository::register([
-            'full_name' => (string) ($_POST['full_name'] ?? ''),
-            'student_code' => (string) ($_POST['student_code'] ?? ''),
-            'dob' => (string) ($_POST['dob'] ?? ''),
-            'phone' => (string) ($_POST['phone'] ?? ''),
-            'email' => (string) ($_POST['email'] ?? ''),
-            'department' => (string) ($_POST['department'] ?? ''),
-            'priority_level' => (int) ($_POST['priority_level'] ?? 8),
-        ]);
-        $successMessage = 'Đăng ký đã được ghi nhận. Mã hồ sơ: #' . $studentId;
-    } catch (Throwable $e) {
-        $errorMessage = $e->getMessage();
-    }
-}
-
-require_once __DIR__ . '/../views/partials/public_header.php';
-?>
 
 <section class="hero-section rounded-0 p-5 p-lg-8 text-center mb-5" style="margin-left: -12px; margin-right: -12px;">
     <h1 class="hero-title mb-3">Đăng ký nội trú</h1>
@@ -52,7 +27,6 @@ require_once __DIR__ . '/../views/partials/public_header.php';
             <div class="feature-card p-4 p-lg-5">
                 <h2 class="section-title mb-4">Biểu mẫu đăng ký</h2>
                 <form method="post" class="row g-4">
-                    <?= Security::csrfField(); ?>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Họ và tên *</label>
                         <input name="full_name" class="form-control form-control-lg" required>

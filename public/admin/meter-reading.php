@@ -147,7 +147,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         if (parseFloat(form.new_water.value) < parseFloat(form.old_water.value)) { alert('Chỉ số nước mới phải >= chỉ số nước cũ'); return; }
 
         const formData = new FormData(form);
-        formData.append('csrf_token', window.APP_CSRF);
 
         try {
             const resp = await fetch((window.APP_BASE_URL || '') + '/api/bills/meter-reading.php', {

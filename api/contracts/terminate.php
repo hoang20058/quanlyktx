@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/app.php';
-Security::requireAuth();
+Security::requireAdminAuth();
 
 $data = Api::input();
-Api::requireCsrf($data);
 
 $contractId = (int) ($data['contract_id'] ?? 0);
 $endDate = trim((string) ($data['end_date'] ?? date('Y-m-d')));

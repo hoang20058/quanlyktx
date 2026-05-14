@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $pageTitle = $pageTitle ?? APP_NAME;
 $activeMenu = $activeMenu ?? 'dashboard';
-$currentUser = Security::user();
+$currentUser = Security::admin();
 ?><!doctype html>
 <html lang="vi">
 <head>

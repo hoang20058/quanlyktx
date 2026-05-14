@@ -166,7 +166,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 <script>
 document.getElementById('saveDetailBtn').addEventListener('click', async () => {
     const form = document.getElementById('detailForm');
-    const data = Object.fromEntries(new FormData(form)); data.csrf_token = window.APP_CSRF;
+    const data = Object.fromEntries(new FormData(form));
     try {
         const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/save.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         const json = await resp.json(); if (resp.ok && json.ok) { alert('Lưu thành công'); location.reload(); } else { alert('Lỗi: ' + (json.message || 'Không thành công')); }
@@ -177,7 +177,7 @@ document.getElementById('extendDetailBtn').addEventListener('click', async () =>
     const newDate = prompt('Nhập ngày kết thúc mới (YYYY-MM-DD):'); if (!newDate) return;
     const id = document.querySelector('#detailForm [name=contract_id]').value;
     try {
-        const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/extend.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contract_id: id, new_end_date: newDate, csrf_token: window.APP_CSRF }) });
+        const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/extend.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contract_id: id, new_end_date: newDate }) });
         const json = await resp.json(); if (resp.ok && json.ok) { alert('Gia hạn thành công'); location.reload(); } else { alert('Lỗi: ' + (json.message || 'Không thành công')); }
     } catch (err) { alert('Lỗi kết nối'); }
 });
@@ -186,7 +186,7 @@ document.getElementById('terminateDetailBtn').addEventListener('click', async ()
     if (!confirm('Xác nhận kết thúc hợp đồng này?')) return;
     const id = document.querySelector('#detailForm [name=contract_id]').value;
     try {
-        const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/terminate.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contract_id: id, end_date: new Date().toISOString().slice(0,10), reason: 'Kết thúc tại chi tiết', csrf_token: window.APP_CSRF }) });
+        const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/terminate.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contract_id: id, end_date: new Date().toISOString().slice(0,10), reason: 'Kết thúc tại chi tiết' }) });
         const json = await resp.json(); if (resp.ok && json.ok) { alert('Kết thúc hợp đồng thành công'); location.href = './contracts.php'; } else { alert('Lỗi: ' + (json.message || 'Không thành công')); }
     } catch (err) { alert('Lỗi kết nối'); }
 });
@@ -205,7 +205,6 @@ document.getElementById('terminateDetailBtn').addEventListener('click', async ()
         
         const formData = new FormData(payForm);
         formData.set('amount', amount.toString());
-        formData.append('csrf_token', window.APP_CSRF);
         
         try {
             const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/pay.php', { 

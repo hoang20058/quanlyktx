@@ -12,11 +12,8 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim((string) ($_POST['username'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
-    $token = $_POST['csrf_token'] ?? null;
 
-    if (!Security::verifyCsrfToken($token)) {
-        $error = 'CSRF token không hợp lệ.';
-    } elseif ($username === 'admin' && $password === 'admin') {
+    if ($username === 'admin' && $password === 'admin') {
         $user = ['id' => 1, 'username' => 'admin', 'full_name' => 'Administrator'];
         Security::loginAdmin($user);
         header('Location: ' . APP_URL . '/admin/index.php');
@@ -54,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="alert alert-danger"><?= Security::e($error); ?></div>
                         <?php endif; ?>
                         <form method="post" action="">
-                            <?= Security::csrfField(); ?>
                             <div class="mb-3">
                                 <label class="form-label">Tên đăng nhập</label>
                                 <input name="username" class="form-control form-control-lg" placeholder="admin" required>

@@ -171,20 +171,8 @@ foreach ($endpoints as $path => $desc) {
 
 // ===== 8. CSRF Token Generation =====
 echo "\n[8] Security - CSRF Token\n";
-try {
-    Security::generateCsrfToken();
-    $token = Security::getCsrfToken();
-    if (!empty($token)) {
-        echo "✓ CSRF token generated successfully\n";
-        $successes[] = "✓ CSRF token system working";
-    } else {
-        $warnings[] = "⚠ CSRF token empty";
-        echo "⚠ Token empty\n";
-    }
-} catch (Throwable $e) {
-    $warnings[] = "⚠ CSRF check warning: " . $e->getMessage();
-    echo "⚠ Warning: " . $e->getMessage() . "\n";
-}
+echo "ℹ CSRF protection has been disabled from the system\n";
+$successes[] = "ℹ CSRF protection disabled";
 
 // ===== 9. Student With Debt Query =====
 echo "\n[9] Debt Report\n";

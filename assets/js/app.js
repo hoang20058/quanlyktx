@@ -64,6 +64,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const roomForm = document.getElementById('roomForm');
     const roomModal = document.getElementById('roomModal');
+    const roomFloorInput = roomForm?.querySelector('[name="floor_number"]');
+    const roomSequenceInput = roomForm?.querySelector('[name="room_sequence"]');
+    const roomNumberDisplay = document.getElementById('room_number_display');
+
+    const updateRoomNumberDisplay = () => {
+        const floor = parseInt(roomFloorInput?.value || '0', 10);
+        const sequence = parseInt(roomSequenceInput?.value || '0', 10);
+        const roomNumber = floor > 0 && sequence > 0 ? (floor * 100 + sequence) : 0;
+
+        if (roomNumberDisplay) {
+            roomNumberDisplay.value = roomNumber > 0 ? `P${roomNumber}` : 'P000';
+        }
+    };
+
+    roomForm?.querySelectorAll('.form-room-input').forEach((element) => {
+        element.addEventListener('input', updateRoomNumberDisplay);
+    });
+
     document.querySelectorAll('.btn-edit-room').forEach((btn) => {
         btn.addEventListener('click', () => {
             if (!roomForm || !roomModal) return;
@@ -76,15 +94,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: btn.dataset.status,
                 price: btn.dataset.price,
             });
+
+            const roomNumber = parseInt(btn.dataset.roomNumber || '0', 10);
+            const roomSequence = roomNumber > 0 ? roomNumber % 100 : 0;
+            if (roomSequenceInput) {
+                roomSequenceInput.value = roomSequence > 0 ? String(roomSequence) : '';
+            }
+            updateRoomNumberDisplay();
         });
     });
     roomModal?.addEventListener('show.bs.modal', (event) => {
-        if (!roomForm) return;
-        const trigger = event.relatedTarget;
-        if (trigger && trigger.getAttribute('data-room-id') === '0') {
-            roomForm.reset();
-            const hidden = roomForm.querySelector('[name="room_id"]');
-            if (hidden) hidden.value = '0';
+            if (!roomForm) return;
+            const trigger = event.relatedTarget;
+            if (trigger && trigger.getAttribute('data-room-id') === '0') {
+                roomForm.reset();
+                const hidden = roomForm.querySelector('[name="room_id"]');
+                if (hidden) hidden.value = '0';
+            }
+            updateRoomNumberDisplay();
         }
     });
 
@@ -176,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resp = await fetch(apiUrl('/api/rooms/switch.php'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: studentId, new_room_id: newRoomId, csrf_token: window.APP_CSRF })
+                    body: JSON.stringify({ student_id: studentId, new_room_id: newRoomId })
                 });
                 const data = await resp.json();
                 if (!resp.ok || !data.ok) {
@@ -201,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', async () => {
             const fd = new FormData(form);
             const data = Object.fromEntries(fd.entries());
-            data.csrf_token = window.APP_CSRF;
 
             try {
                 const resp = await fetch(apiUrl(endpoint), {
@@ -237,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const resp = await fetch(apiUrl(endpoint), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ [payloadKey]: id, csrf_token: window.APP_CSRF })
+                        body: JSON.stringify({ [payloadKey]: id })
                     });
                     const json = await resp.json();
                     if (resp.ok && json.ok) {

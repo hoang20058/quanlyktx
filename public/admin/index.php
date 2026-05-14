@@ -16,19 +16,19 @@ $topStudents = StudentRepository::topStudents(5);
 $noticeCount = count(NoticeRepository::all());
 $studentsWithDebt = ContractRepository::studentsWithDebt();
 
-$currentUser = Security::user();
+$currentUser = Security::admin();
 
 require_once __DIR__ . '/../../views/partials/admin_header.php';
 ?>
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-xl-3">
-        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Tổng phòng</div><div class="stat-value">128</div></div><div class="icon-badge primary"><i class="bi bi-door-open"></i></div></div><div class="small text-success mt-3 fw-semibold"><i class="bi bi-arrow-up-right"></i> +8 so với tháng trước</div></div></div>
+        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Tổng phòng</div><div class="stat-value"><?= Security::e((string) $roomStats['totalRooms']); ?></div></div><div class="icon-badge primary"><i class="bi bi-door-open"></i></div></div><div class="small text-success mt-3 fw-semibold"><i class="bi bi-arrow-up-right"></i> Phòng hoạt động: <?= Security::e((string) $roomStats['activeRooms']); ?></div></div></div>
     </div>
     <div class="col-md-6 col-xl-3">
-        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Sinh viên nội trú</div><div class="stat-value"><?= Security::e((string) $studentStats['living']); ?></div></div><div class="icon-badge blue"><i class="bi bi-mortarboard"></i></div></div><div class="small text-success mt-3 fw-semibold"><i class="bi bi-arrow-up-right"></i> Chờ duyệt: <?= Security::e((string) $studentStats['waiting']); ?></div></div></div>
+        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Sinh viên nội trú</div><div class="stat-value"><?= Security::e((string) $studentStats['living']); ?></div></div><div class="icon-badge blue"><i class="bi bi-mortarboard"></i></div></div><div class="small text-success mt-3 fw-semibold"><i class="bi bi-arrow-up-right"></i> Chờ duyệt: <?= Security::e((string) $studentStats['waiting']); ?></div>`</div></div>
     </div>
     <div class="col-md-6 col-xl-3">
-        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Sức chứa tổng</div><div class="stat-value"><?= Security::e((string) $roomStats['totalCapacity']); ?></div></div><div class="icon-badge amber"><i class="bi bi-receipt"></i></div></div><div class="small text-warning mt-3 fw-semibold"><i class="bi bi-exclamation-triangle"></i> Phòng hoạt động: <?= Security::e((string) $roomStats['activeRooms']); ?></div></div></div>
+        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Sức chứa tổng</div><div class="stat-value"><?= Security::e((string) $roomStats['totalCapacity']); ?></div></div><div class="icon-badge amber"><i class="bi bi-receipt"></i></div></div><div class="small text-warning mt-3 fw-semibold"></div></div></div>
     </div>
     <div class="col-md-6 col-xl-3">
         <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Thông báo mới</div><div class="stat-value"><?= Security::e((string) $noticeCount); ?></div></div><div class="icon-badge rose"><i class="bi bi-megaphone"></i></div></div><div class="small text-primary mt-3 fw-semibold"><i class="bi bi-bell"></i> Sinh viên cao điểm: <?= Security::e((string) $studentStats['topScore']); ?></div></div></div>

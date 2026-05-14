@@ -114,7 +114,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                     const resp = await fetch((window.APP_BASE_URL || '') + endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ [payloadKey]: id, csrf_token: window.APP_CSRF })
+                        body: JSON.stringify({ [payloadKey]: id })
                     });
                     const json = await resp.json();
                     if (resp.ok && json.ok) {
@@ -140,7 +140,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                 const resp = await fetch((window.APP_BASE_URL || '') + '/api/bills/mark-paid.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bill_id: billId, csrf_token: window.APP_CSRF })
+                    body: JSON.stringify({ bill_id: billId })
                 });
                 const json = await resp.json();
                 if (resp.ok && json.ok) {
@@ -159,7 +159,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         saveBillBtn.addEventListener('click', async () => {
             const form = document.getElementById('billForm');
             const data = new FormData(form);
-            data.set('csrf_token', window.APP_CSRF);
             
             try {
                 const resp = await fetch((window.APP_BASE_URL || '') + '/api/bills/save.php', {

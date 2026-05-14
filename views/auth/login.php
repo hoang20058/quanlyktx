@@ -31,7 +31,6 @@ declare(strict_types=1);
                             <div class="alert alert-danger"><?= Security::e($error); ?></div>
                         <?php endif; ?>
                         <form method="post" action="">
-                            <?= Security::csrfField(); ?>
                             <div class="mb-3"><label class="form-label">Tên đăng nhập</label><input name="username" class="form-control form-control-lg" required></div>
                             <div class="mb-3"><label class="form-label">Mật khẩu</label><input name="password" type="password" class="form-control form-control-lg" required></div>
                             <div class="d-flex justify-content-between align-items-center">

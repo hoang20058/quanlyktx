@@ -60,7 +60,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
             <div class="panel-glass rounded-4 p-4">
                 <h5 class="mb-3">Tùy chọn phòng</h5>
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#roomModal" data-room-id="<?= Security::e((string) $room['room_id']); ?>" data-room-number="<?= Security::e((string) $room['room_number']); ?>" data-floor-number="<?= Security::e((string) $room['floor_number']); ?>" data-capacity="<?= Security::e((string) $room['capacity']); ?>" data-room-type="<?= Security::e((string) $room['room_type']); ?>" data-status="<?= Security::e((string) $room['status']); ?>" data-price="<?= Security::e((string) $room['price']); ?>">Chỉnh sửa phòng</button>
                     <a class="btn btn-outline-secondary" href="rooms.php">Quay lại danh sách</a>
                 </div>
             </div>
@@ -100,39 +99,4 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     </div>
 </div>
 
-<!-- Edit room modal -->
-<div class="modal fade" id="roomModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Chỉnh sửa phòng</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <form id="roomForm" class="row g-3">
-                    <input type="hidden" name="room_id" value="0">
-                    <div class="col-6"><label class="form-label">Tầng</label><input name="floor_number" class="form-control form-room-input" type="number" min="1" required></div>
-                    <div class="col-6"><label class="form-label">Số phòng</label><input name="room_sequence" class="form-control form-room-input" type="number" min="1" max="99" required></div>
-                    <div class="col-6"><label class="form-label">Sức chứa</label><input name="capacity" class="form-control" type="number" required></div>
-                    <div class="col-6"><label class="form-label">Loại</label><select name="room_type" class="form-select"><option>Dịch vụ</option><option>Thường</option></select></div>
-                    <div class="col-6"><label class="form-label">Trạng thái</label><select name="status" class="form-select"><option>Hoạt động</option><option>Đang sửa chữa</option></select></div>
-                    <div class="col-6"><label class="form-label">Giá</label><input name="price" class="form-control" type="number" step="0.01" required></div>
-                </form>
-            </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button><button id="saveRoomBtn" type="button" class="btn btn-primary">Lưu</button></div>
-        </div>
-    </div>
-</div>
-
 <?php require_once __DIR__ . '/../../views/partials/admin_footer.php'; ?>
-
-<script>
-(function () {
-    const updateRoomNumber = () => {
-        const floor = parseInt(document.querySelector('[name="floor_number"]')?.value || '0', 10);
-        const seq = parseInt(document.querySelector('[name="room_sequence"]')?.value || '0', 10);
-        console.log('Room number:', floor * 100 + seq);
-    };
-    
-    document.querySelectorAll('.form-room-input').forEach(el => {
-        el.addEventListener('input', updateRoomNumber);
-    });
-})();
-</script>

@@ -11,11 +11,6 @@ $errorMessage = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $token = $_POST['csrf_token'] ?? null;
-        if (!Security::verifyCsrfToken($token)) {
-            throw new RuntimeException('CSRF token không hợp lệ.');
-        }
-
         $name = trim((string) ($_POST['contact_name'] ?? ''));
         $email = trim((string) ($_POST['contact_email'] ?? ''));
         $subject = trim((string) ($_POST['contact_subject'] ?? ''));
@@ -56,7 +51,6 @@ require_once __DIR__ . '/../views/partials/public_header.php';
             <div class="feature-card p-4 p-lg-5 h-100">
                 <h2 class="section-title mb-4">Gửi tin nhắn</h2>
                 <form method="post" class="row g-3">
-                    <?= Security::csrfField(); ?>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Họ và tên *</label>
                         <input name="contact_name" class="form-control form-control-lg" required>

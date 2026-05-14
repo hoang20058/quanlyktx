@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/app.php';
-Security::requireAuth();
+Security::requireAdminAuth();
 
 $data = Api::input();
-Api::requireCsrf($data);
 
 $roomId = (int) ($data['room_id'] ?? 0);
 $oldE = (float) ($data['old_electric'] ?? 0);

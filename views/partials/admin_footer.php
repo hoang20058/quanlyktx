@@ -12,7 +12,6 @@ declare(strict_types=1);
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     window.APP_BASE_URL = "<?= Security::e(APP_BASE_URL); ?>";
-    window.APP_CSRF = "<?= Security::e(Security::csrfToken()); ?>";
 </script>
 <script src="<?= Security::e(APP_BASE_URL); ?>/assets/js/app.js"></script>
 <!-- Toast container + global alert override to use Bootstrap toasts -->

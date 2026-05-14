@@ -68,17 +68,18 @@ final class RoomRepository
             ':room_type' => (string) ($data['room_type'] ?? 'Thường'),
             ':status' => (string) ($data['status'] ?? 'Hoạt động'),
             ':price' => (float) ($data['price'] ?? 0),
+            ':room_image_url' => !empty($data['room_image_url']) ? (string) $data['room_image_url'] : null,
         ];
 
         if ($roomId > 0) {
             $payload[':room_id'] = $roomId;
-            $sql = 'UPDATE Room SET room_number = :room_number, floor_number = :floor_number, capacity = :capacity, room_type = :room_type, status = :status, price = :price WHERE room_id = :room_id';
+            $sql = 'UPDATE Room SET room_number = :room_number, floor_number = :floor_number, capacity = :capacity, room_type = :room_type, status = :status, price = :price, room_image_url = :room_image_url WHERE room_id = :room_id';
             $stmt = $db->prepare($sql);
             $stmt->execute($payload);
             return $roomId;
         }
 
-        $sql = 'INSERT INTO Room (room_number, floor_number, capacity, room_type, status, price) VALUES (:room_number, :floor_number, :capacity, :room_type, :status, :price)';
+        $sql = 'INSERT INTO Room (room_number, floor_number, capacity, room_type, status, price, room_image_url) VALUES (:room_number, :floor_number, :capacity, :room_type, :status, :price, :room_image_url)';
         $stmt = $db->prepare($sql);
         $stmt->execute($payload);
         return (int) $db->lastInsertId();

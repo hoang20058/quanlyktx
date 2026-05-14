@@ -3,18 +3,13 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/app.php';
-Security::requireAuth();
+Security::requireAdminAuth();
 
 header('Content-Type: application/json; charset=utf-8');
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new RuntimeException('Only POST allowed');
-    }
-
-    $token = $_POST['csrf_token'] ?? null;
-    if (!Security::verifyCsrfToken($token)) {
-        throw new RuntimeException('CSRF token không hợp lệ');
     }
 
     $studentId = (int) ($_POST['student_id'] ?? 0);

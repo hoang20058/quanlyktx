@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/app.php';
-Security::requireAuth();
+Security::requireAdminAuth();
 
 $roomId = (int) ($_GET['room_id'] ?? 0);
 

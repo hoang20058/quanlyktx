@@ -170,7 +170,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                     const resp = await fetch((window.APP_BASE_URL || '') + endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ [payloadKey]: id, csrf_token: window.APP_CSRF })
+                        body: JSON.stringify({ [payloadKey]: id })
                     });
                     const json = await resp.json();
                     if (resp.ok && json.ok) {
@@ -243,7 +243,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
         saveBtn.addEventListener('click', async () => {
             const form = document.getElementById('contractForm');
             const data = new FormData(form);
-            data.set('csrf_token', window.APP_CSRF);
 
             try {
                 const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/save.php', {
@@ -292,7 +291,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 
     document.getElementById('confirmExtendBtn').addEventListener('click', async () => {
         const form = document.getElementById('extendForm');
-        const data = Object.fromEntries(new FormData(form)); data.csrf_token = window.APP_CSRF;
+        const data = Object.fromEntries(new FormData(form));
         try {
             const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/extend.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
             const json = await resp.json();
@@ -302,7 +301,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
 
     document.getElementById('confirmTerminateBtn').addEventListener('click', async () => {
         const form = document.getElementById('terminateForm');
-        const data = Object.fromEntries(new FormData(form)); data.csrf_token = window.APP_CSRF;
+        const data = Object.fromEntries(new FormData(form));
         try {
             const resp = await fetch((window.APP_BASE_URL || '') + '/api/contracts/terminate.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
             const json = await resp.json();

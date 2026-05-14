@@ -101,6 +101,11 @@ require_once __DIR__ . '/../views/partials/public_header.php';
         <?php foreach ($rooms as $room): ?>
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="room-card p-4 h-100">
+                    <?php if (!empty($room['room_image_url'])): ?>
+                        <div class="mb-3" style="height: 180px; border-radius: 0.5rem; overflow: hidden; background: #e9ecef;">
+                            <img src="<?= Security::e((string) $room['room_image_url']); ?>" alt="Phòng <?= Security::e((string) $room['room_number']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                    <?php endif; ?>
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
                             <div class="text-uppercase small text-muted fw-semibold">Tầng <?= Security::e((string) $room['floor_number']); ?></div>
@@ -209,7 +214,6 @@ require_once __DIR__ . '/../views/partials/public_header.php';
                     <div class="d-flex gap-3 mb-3">
                         <?php foreach (array_slice($studentsInRoom, 0, 5) as $s): ?>
                             <div class="text-center small">
-                                <img src="https://i.pravatar.cc/40?u=<?= Security::e((string)$s['student_id']); ?>" class="rounded-circle mb-1" alt="avatar"><br>
                                 <?= Security::e((string)$s['full_name']); ?><br>
                                 <span class="text-muted"><?= Security::e((string)$s['boarding_score']); ?></span>
                             </div>

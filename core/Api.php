@@ -29,11 +29,4 @@ final class Api
         }
         return $_POST;
     }
-
-    public static function requireCsrf(array $data): void
-    {
-        if (!Security::verifyCsrfToken($data['csrf_token'] ?? null)) {
-            self::json(['ok' => false, 'message' => 'CSRF token không hợp lệ'], 419);
-        }
-    }
 }

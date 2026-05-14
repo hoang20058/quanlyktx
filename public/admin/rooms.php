@@ -60,7 +60,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                                 data-capacity="<?= Security::e((string) $room['capacity']); ?>"
                                 data-room-type="<?= Security::e((string) $room['room_type']); ?>"
                                 data-status="<?= Security::e((string) $room['status']); ?>"
-                                data-price="<?= Security::e((string) $room['price']); ?>">
+                                              data-price="<?= Security::e((string) $room['price']); ?>">
                             Sửa
                         </button>
                         <button class="btn btn-sm btn-outline-danger btn-delete-room"
@@ -99,13 +99,6 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                             <div class="col-12"><label class="form-label">Giá phòng</label><input name="price" class="form-control" type="number" step="0.01" required></div>
                         </form>
                     </div>
-                    <div class="col-lg-4">
-                        <div class="panel-glass rounded-4 p-4 h-100">
-                            <div class="fw-semibold mb-2">Chuẩn giao diện CRUD</div>
-                            <p class="text-secondary mb-3">Nhập tầng và số phòng, mã phòng sẽ được tự động tính toán. Ví dụ: Tầng 1, Số 03 → P103</p>
-                            <div class="alert alert-info border-0 small mb-0">Mã phòng được tạo từ công thức: Tầng × 100 + Số phòng</div>
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
@@ -116,37 +109,3 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     </div>
 </div>
 <?php require_once __DIR__ . '/../../views/partials/admin_footer.php'; ?>
-
-<script>
-(function () {
-    const updateRoomNumber = () => {
-        const floor = parseInt(document.querySelector('[name="floor_number"]')?.value || '0', 10);
-        const seq = parseInt(document.querySelector('[name="room_sequence"]')?.value || '0', 10);
-        const roomNum = floor * 100 + seq;
-        document.getElementById('room_number_display').value = roomNum > 0 ? 'P' + roomNum : 'P000';
-    };
-    
-    document.querySelectorAll('.form-room-input').forEach(el => {
-        el.addEventListener('input', updateRoomNumber);
-    });
-    
-    document.querySelectorAll('.btn-edit-room').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const roomNum = parseInt(btn.dataset.roomNumber, 10) || 0;
-            const floor = Math.floor(roomNum / 100);
-            const seq = roomNum % 100;
-            document.querySelector('[name="floor_number"]').value = floor;
-            document.querySelector('[name="room_sequence"]').value = seq;
-            updateRoomNumber();
-        });
-    });
-    
-    document.getElementById('roomModal')?.addEventListener('show.bs.modal', (e) => {
-        if (e.relatedTarget?.getAttribute('data-room-id') === '0') {
-            document.getElementById('roomForm').reset();
-            document.querySelector('[name="room_id"]').value = '0';
-            updateRoomNumber();
-        }
-    });
-})();
-</script>

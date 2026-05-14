@@ -1,8 +1,25 @@
-# Hệ thống Quản lý Ký túc xá
+# 🏢 Quản Lý Ký Túc Xá - Hệ Thống Quản Lý Nội Trú
 
-Ứng dụng PHP thuần + MySQL + Bootstrap 5 cho bài tập quản lý ký túc xá. Dự án đang được thiết kế theo mô hình đơn giản gồm 3 lớp chính: giao diện `public/` và `views/`, xử lý nghiệp vụ trong `models/`, và các API trong `api/`.
+Ứng dụng web được xây dựng bằng **PHP Pure** (không framework), **MySQL**, và **Bootstrap 5**. Thiết kế cho dễ hiểu, dễ bảo trì, phù hợp bài tập lớn (BTL).
 
-## Mục tiêu
+✨ **Đặc điểm:** Clean code, mọi dòng code có thể giải thích, dễ học hỏi
+
+📚 **Tài liệu:** Tham khảo tài liệu chi tiết tại [docs/README.md](docs/README.md).
+
+## 📚 Tài Liệu
+
+Dự án có tài liệu toàn diện trong folder `docs/`:
+
+| Tài Liệu | Mục Đích |
+|----------|----------|
+| [docs/README.md](docs/README.md) | Tổng quan hệ thống chi tiết |
+| [docs/SETUP.md](docs/SETUP.md) | Hướng dẫn cài đặt & khắc phục |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Thiết kế hệ thống & data flow |
+| [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md) | Tiêu chuẩn viết code |
+| [docs/API_GUIDE.md](docs/API_GUIDE.md) | API endpoints & validation |
+| [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Hướng dẫn phát triển nhanh |
+
+## 🎯 Mục tiêu
 - Quản lý sinh viên, phòng ở, hợp đồng và hóa đơn điện nước.
 - Hỗ trợ quy trình đăng ký ở ký túc xá, duyệt hồ sơ, tạo hợp đồng và thu công nợ.
 - Quản lý điểm nội trú theo cơ chế khen thưởng / kỷ luật.
@@ -64,6 +81,8 @@ Nếu chạy trong XAMPP theo mặc định, bạn chỉ cần sửa lại `.env
 - Đã loại bỏ các endpoint chốt hóa đơn hàng loạt cũ không còn dùng trong luồng hiện tại.
 - Giữ lại luồng hóa đơn theo phòng / tháng trong `public/admin/meter-reading.php` và `api/bills/meter-reading.php`.
 - Bộ seed đang dùng thống nhất qua `database/seeding.sql` và `tools/import_seed.php`.
+- Luồng upload ảnh phòng trong admin đã được loại bỏ để đơn giản hóa nghiệp vụ cập nhật phòng.
+- JavaScript xử lý modal phòng được gom về `assets/js/app.js`, giảm script inline ở trang `public/admin/rooms.php`.
 
 ## Chức năng chính
 ### Public / Sinh viên

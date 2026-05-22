@@ -18,7 +18,6 @@ $currentUser = Security::admin();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="<?= Security::e(APP_BASE_URL); ?>/assets/css/app.css?v=1.3" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -32,7 +31,6 @@ $currentUser = Security::admin();
         </div>
         <nav class="sidebar-nav nav flex-column">
             <a class="nav-link <?= $activeMenu === 'dashboard' ? 'active' : ''; ?>" href="./index.php"><i class="bi bi-grid-1x2-fill"></i>Dashboard</a>
-            <a class="nav-link <?= $activeMenu === 'analytics' ? 'active' : ''; ?>" href="./analytics.php"><i class="bi bi-bar-chart-fill"></i>Analytics</a>
             <a class="nav-link <?= $activeMenu === 'rooms' ? 'active' : ''; ?>" href="./rooms.php"><i class="bi bi-door-open-fill"></i>Quản lý phòng</a>
             <a class="nav-link <?= $activeMenu === 'students' ? 'active' : ''; ?>" href="./students.php"><i class="bi bi-people-fill"></i>Quản lý sinh viên</a>
             <a class="nav-link <?= $activeMenu === 'contracts' ? 'active' : ''; ?>" href="./contracts.php"><i class="bi bi-file-earmark-text-fill"></i>Quản lý hợp đồng</a>
@@ -68,3 +66,10 @@ $currentUser = Security::admin();
             </div>
         </header>
         <main class="container-fluid px-4 py-4">
+            <?php $flashMessage = function_exists('getFlashMessage') ? getFlashMessage() : null; ?>
+            <?php if ($flashMessage): ?>
+                <div class="alert alert-<?= h((string) ($flashMessage['type'] ?? 'success')); ?> alert-dismissible fade show" role="alert">
+                    <?= h((string) ($flashMessage['message'] ?? '')); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>

@@ -3,44 +3,150 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/app.php';
-
 Security::requireAdminAuth();
 
+function fetchDashboardRoomStats(PDO $pdo): array
+{
+    return [
+        'totalRooms' => (int) $pdo->query('SELECT COUNT(*) FROM Room')->fetchColumn(),
+        'activeRooms' => (int) $pdo->query("SELECT COUNT(*) FROM Room WHERE status = 'Hoạt động'")->fetchColumn(),
+        'totalCapacity' => (int) $pdo->query('SELECT COALESCE(SUM(capacity), 0) FROM Room')->fetchColumn(),
+        'occupied' => (int) $pdo->query("SELECT COUNT(*) FROM Contract WHERE status = 'Đang ở'")->fetchColumn(),
+    ];
+}
+
+function fetchDashboardStudentStats(PDO $pdo): array
+{
+    return [
+        'waiting' => (int) $pdo->query("SELECT COUNT(*) FROM Student WHERE status = 'Chờ duyệt'")->fetchColumn(),
+        'living' => (int) $pdo->query("SELECT COUNT(*) FROM Student WHERE status = 'Đang ở'")->fetchColumn(),
+        'moved' => (int) $pdo->query("SELECT COUNT(*) FROM Student WHERE status = 'Đã chuyển đi'")->fetchColumn(),
+    ];
+}
+
+function fetchDashboardTopRooms(PDO $pdo, int $limit): array
+{
+    $stmt = $pdo->prepare("
+        SELECT r.room_id, r.room_number, r.floor_number, r.capacity, r.status,
+               COUNT(c.contract_id) AS occupancy,
+               ROUND(COALESCE(AVG(s.boarding_score), 0), 2) AS avg_boarding_score
+          FROM Room r
+     LEFT JOIN Contract c ON c.room_id = r.room_id AND c.status = 'Đang ở'
+     LEFT JOIN Student s ON s.student_id = c.student_id
+      GROUP BY r.room_id
+      ORDER BY occupancy DESC, avg_boarding_score DESC, r.room_number ASC
+         LIMIT :limit
+    ");
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll();
+}
+
+function fetchDashboardUnpaidBills(PDO $pdo, int $limit): array
+{
+    $stmt = $pdo->prepare("
+        SELECT b.bill_id, b.room_id, b.billing_month, b.billing_year, b.total_amount, b.status,
+               r.room_number
+          FROM UtilityBill b
+          JOIN Room r ON r.room_id = b.room_id
+         WHERE b.status = 'Chưa thanh toán'
+      ORDER BY b.billing_year DESC, b.billing_month DESC, b.bill_id DESC
+         LIMIT :limit
+    ");
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll();
+}
+
+function fetchDashboardUnpaidBillStats(PDO $pdo): array
+{
+    $stmt = $pdo->query("
+        SELECT COUNT(*) AS bill_count,
+               COALESCE(SUM(total_amount), 0) AS total_amount
+          FROM UtilityBill
+         WHERE status = 'Chưa thanh toán'
+    ");
+    $stats = $stmt->fetch() ?: [];
+
+    return [
+        'count' => (int) ($stats['bill_count'] ?? 0),
+        'totalAmount' => (float) ($stats['total_amount'] ?? 0),
+    ];
+}
+
+function fetchDashboardNoticeCount(PDO $pdo): int
+{
+    return (int) $pdo->query('SELECT COUNT(*) FROM Notice')->fetchColumn();
+}
+
+$pdo = Database::connection();
 $pageTitle = 'Dashboard - ' . APP_NAME;
 $activeMenu = 'dashboard';
 
-$roomStats = RoomRepository::stats();
-$studentStats = StudentRepository::registrationStats();
-$topRooms = RoomRepository::topRooms(5);
-$topStudents = StudentRepository::topStudents(5);
-$noticeCount = count(NoticeRepository::all());
-$studentsWithDebt = ContractRepository::studentsWithDebt();
-
+$roomStats = fetchDashboardRoomStats($pdo);
+$studentStats = fetchDashboardStudentStats($pdo);
+$topRooms = fetchDashboardTopRooms($pdo, 5);
+$unpaidBills = fetchDashboardUnpaidBills($pdo, 10);
+$unpaidBillStats = fetchDashboardUnpaidBillStats($pdo);
+$noticeCount = fetchDashboardNoticeCount($pdo);
 $currentUser = Security::admin();
-$dashboardDebtRows = array_slice($studentsWithDebt, 0, 10);
-$debtRooms = array_values(array_unique(array_filter(array_map(static fn (array $row): string => !empty($row['room_number']) ? 'P' . (string) $row['room_number'] : '', $dashboardDebtRows))));
-sort($debtRooms);
-$topRoomFloors = array_values(array_unique(array_map(static fn (array $row): int => (int) ($row['floor_number'] ?? 0), $topRooms)));
-$topRoomFloors = array_values(array_filter($topRoomFloors, static fn (int $floor): bool => $floor > 0));
+
+$billRooms = array_values(array_unique(array_filter(array_map(static fn (array $row): string => !empty($row['room_number']) ? 'P' . (string) $row['room_number'] : '', $unpaidBills))));
+$billMonths = array_values(array_unique(array_filter(array_map(static fn (array $row): string => (string) ($row['billing_month'] ?? ''), $unpaidBills), static fn (string $value): bool => $value !== '')));
+$billYears = array_values(array_unique(array_filter(array_map(static fn (array $row): string => (string) ($row['billing_year'] ?? ''), $unpaidBills), static fn (string $value): bool => $value !== '')));
+$topRoomFloors = array_values(array_unique(array_filter(array_map(static fn (array $row): int => (int) ($row['floor_number'] ?? 0), $topRooms), static fn (int $floor): bool => $floor > 0)));
+sort($billRooms);
+sort($billMonths, SORT_NUMERIC);
+sort($billYears, SORT_NUMERIC);
 sort($topRoomFloors, SORT_NUMERIC);
-$dashboardToday = new DateTimeImmutable('today');
-$dashboardSoonLimit = $dashboardToday->modify('+30 days');
 
 require_once __DIR__ . '/../../views/partials/admin_header.php';
 ?>
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-xl-3">
-        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Tổng phòng</div><div class="stat-value"><?= Security::e((string) $roomStats['totalRooms']); ?></div></div><div class="icon-badge primary"><i class="bi bi-door-open"></i></div></div><div class="small text-success mt-3 fw-semibold"><i class="bi bi-arrow-up-right"></i> Phòng hoạt động: <?= Security::e((string) $roomStats['activeRooms']); ?></div></div></div>
+        <div class="admin-stat-card card border-0">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div><div class="text-secondary small mb-2">Tổng phòng</div><div class="stat-value"><?= h($roomStats['totalRooms']); ?></div></div>
+                    <div class="icon-badge primary"><i class="bi bi-door-open"></i></div>
+                </div>
+                <div class="small text-success mt-3 fw-semibold">Phòng hoạt động: <?= h($roomStats['activeRooms']); ?></div>
+            </div>
+        </div>
     </div>
     <div class="col-md-6 col-xl-3">
-        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Sinh viên nội trú</div><div class="stat-value"><?= Security::e((string) $studentStats['living']); ?></div></div><div class="icon-badge blue"><i class="bi bi-mortarboard"></i></div></div><div class="small text-success mt-3 fw-semibold"><i class="bi bi-arrow-up-right"></i> Chờ duyệt: <?= Security::e((string) $studentStats['waiting']); ?></div></div></div>
+        <div class="admin-stat-card card border-0">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div><div class="text-secondary small mb-2">Sinh viên nội trú</div><div class="stat-value"><?= h($studentStats['living']); ?></div></div>
+                    <div class="icon-badge blue"><i class="bi bi-mortarboard"></i></div>
+                </div>
+                <div class="small text-success mt-3 fw-semibold">Chờ duyệt: <?= h($studentStats['waiting']); ?></div>
+            </div>
+        </div>
     </div>
     <div class="col-md-6 col-xl-3">
-        <div class="admin-stat-card card border-0"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Sức chứa tổng</div><div class="stat-value"><?= Security::e((string) $roomStats['totalCapacity']); ?></div></div><div class="icon-badge amber"><i class="bi bi-receipt"></i></div></div><div class="small text-warning mt-3 fw-semibold"></div></div></div>
+        <a class="admin-stat-card card border-0 text-reset h-100" href="bills.php">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div><div class="text-secondary small mb-2">Hóa đơn chưa thu</div><div class="stat-value"><?= h($unpaidBillStats['count']); ?></div></div>
+                    <div class="icon-badge amber"><i class="bi bi-receipt"></i></div>
+                </div>
+                <div class="small text-danger mt-3 fw-semibold"><?= h(number_format($unpaidBillStats['totalAmount'], 0, ',', '.')); ?> đ</div>
+            </div>
+        </a>
     </div>
     <div class="col-md-6 col-xl-3">
         <a class="admin-stat-card card border-0 text-reset h-100" href="notices.php">
-            <div class="card-body p-4"><div class="d-flex justify-content-between align-items-start"><div><div class="text-secondary small mb-2">Thông báo mới</div><div class="stat-value"><?= Security::e((string) $noticeCount); ?></div></div><div class="icon-badge rose"><i class="bi bi-megaphone"></i></div></div><div class="small text-primary mt-3 fw-semibold"><i class="bi bi-arrow-right"></i> Mở trang thông báo</div></div>
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div><div class="text-secondary small mb-2">Thông báo</div><div class="stat-value"><?= h($noticeCount); ?></div></div>
+                    <div class="icon-badge rose"><i class="bi bi-megaphone"></i></div>
+                </div>
+                <div class="small text-primary mt-3 fw-semibold">Mở trang thông báo</div>
+            </div>
         </a>
     </div>
 </div>
@@ -49,95 +155,58 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
     <div class="col-12">
         <div class="table-panel p-4">
             <div class="datatable-toolbar mb-3">
-                <div><div class="section-subtitle text-uppercase fw-semibold small">Tài chính</div><h2 class="section-title mb-0">Sinh viên nợ tiền phòng</h2></div>
+                <div><div class="section-subtitle text-uppercase fw-semibold small">Tài chính</div><h2 class="section-title mb-0">Hóa đơn chưa thanh toán</h2></div>
+                <a class="btn btn-outline-dark btn-sm" href="bills.php">Mở quản lý hóa đơn</a>
             </div>
-            <?php if (empty($studentsWithDebt)): ?>
-                <div class="alert alert-success border-0 mb-0">
-                    <i class="bi bi-check-circle me-2"></i> Tất cả sinh viên đã thanh toán tiền phòng!
-                </div>
+            <?php if (empty($unpaidBills)): ?>
+                <div class="alert alert-success border-0 mb-0">Không có hóa đơn chưa thanh toán.</div>
             <?php else: ?>
-            <div class="admin-filter-bar" data-filter-target="dashboardDebtTable">
-                <div class="admin-filter-field">
-                    <label for="dashboardDebtRoom">Phòng</label>
-                    <select id="dashboardDebtRoom" class="form-select form-select-sm" data-filter-key="room">
-                        <option value="">Tất cả phòng</option>
-                        <?php foreach ($debtRooms as $roomNumber): ?>
-                            <option value="<?= Security::e($roomNumber); ?>"><?= Security::e($roomNumber); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="admin-filter-bar" data-filter-target="dashboardBillsTable">
+                    <div class="admin-filter-field">
+                        <label for="dashboardBillRoom">Phòng</label>
+                        <select id="dashboardBillRoom" class="form-select form-select-sm" data-filter-key="room">
+                            <option value="">Tất cả phòng</option>
+                            <?php foreach ($billRooms as $roomNumber): ?>
+                                <option value="<?= h($roomNumber); ?>"><?= h($roomNumber); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="admin-filter-field">
+                        <label for="dashboardBillMonth">Tháng</label>
+                        <select id="dashboardBillMonth" class="form-select form-select-sm" data-filter-key="month">
+                            <option value="">Tất cả tháng</option>
+                            <?php foreach ($billMonths as $month): ?>
+                                <option value="<?= h($month); ?>">Tháng <?= h($month); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="admin-filter-field">
+                        <label for="dashboardBillYear">Năm</label>
+                        <select id="dashboardBillYear" class="form-select form-select-sm" data-filter-key="year">
+                            <option value="">Tất cả năm</option>
+                            <?php foreach ($billYears as $year): ?>
+                                <option value="<?= h($year); ?>"><?= h($year); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="admin-filter-actions"><button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button></div>
                 </div>
-                <div class="admin-filter-field">
-                    <label for="dashboardDebtLevel">Mức nợ</label>
-                    <select id="dashboardDebtLevel" class="form-select form-select-sm" data-filter-key="debtLevel">
-                        <option value="">Tất cả mức</option>
-                        <option value="high">Từ 3.000.000 đ</option>
-                        <option value="medium">1.000.000 - 2.999.999 đ</option>
-                        <option value="low">Dưới 1.000.000 đ</option>
-                    </select>
-                </div>
-                <div class="admin-filter-field">
-                    <label for="dashboardDebtDue">Thời hạn</label>
-                    <select id="dashboardDebtDue" class="form-select form-select-sm" data-filter-key="dueState">
-                        <option value="">Tất cả thời hạn</option>
-                        <option value="open">Không ngày ra</option>
-                        <option value="active">Còn hạn</option>
-                        <option value="soon">Sắp hết hạn 30 ngày</option>
-                        <option value="overdue">Quá hạn</option>
-                    </select>
-                </div>
-                <div class="admin-filter-actions">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
-                </div>
-            </div>
-            <table id="dashboardDebtTable" class="table datatable table-hover align-middle">
-                <thead>
-                <tr>
-                    <th>Sinh viên</th>
-                    <th>Mã SV</th>
-                    <th>Phòng</th>
-                    <th class="text-danger">Công nợ</th>
-                    <th>Thời hạn</th>
-                </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($dashboardDebtRows as $row): ?>
-                        <?php
-                        $dashboardDebt = (float) ($row['debt'] ?? 0);
-                        $dashboardDebtLevel = $dashboardDebt >= 3000000 ? 'high' : ($dashboardDebt >= 1000000 ? 'medium' : 'low');
-                        $dashboardDueState = 'open';
-                        if (!empty($row['end_date'])) {
-                            try {
-                                $dashboardEndDate = new DateTimeImmutable((string) $row['end_date']);
-                                if ($dashboardEndDate < $dashboardToday) {
-                                    $dashboardDueState = 'overdue';
-                                } elseif ($dashboardEndDate <= $dashboardSoonLimit) {
-                                    $dashboardDueState = 'soon';
-                                } else {
-                                    $dashboardDueState = 'active';
-                                }
-                            } catch (Exception) {
-                                $dashboardDueState = 'open';
-                            }
-                        }
-                        $dashboardDebtRoom = !empty($row['room_number']) ? 'P' . (string) $row['room_number'] : '';
-                        ?>
-                        <tr data-room="<?= Security::e($dashboardDebtRoom); ?>"
-                            data-debt-level="<?= Security::e($dashboardDebtLevel); ?>"
-                            data-due-state="<?= Security::e($dashboardDueState); ?>">
-                            <td><?= Security::e((string) $row['full_name']); ?></td>
-                            <td><?= Security::e((string) $row['student_code']); ?></td>
-                            <td>P<?= Security::e((string) $row['room_number']); ?></td>
-                            <td class="text-danger fw-bold"><?= number_format((float) $row['debt'], 0, ',', '.'); ?> đ</td>
-                            <td><?= $row['end_date'] ? Security::e((string) $row['end_date']) : '-'; ?></td>
+                <table id="dashboardBillsTable" class="table datatable table-hover align-middle">
+                    <thead><tr><th>Phòng</th><th>Tháng/Năm</th><th>Số tiền</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($unpaidBills as $bill): ?>
+                        <?php $billRoom = !empty($bill['room_number']) ? 'P' . (string) $bill['room_number'] : ''; ?>
+                        <tr data-room="<?= h($billRoom); ?>"
+                            data-month="<?= h($bill['billing_month']); ?>"
+                            data-year="<?= h($bill['billing_year']); ?>">
+                            <td class="fw-semibold"><?= h($billRoom); ?></td>
+                            <td><?= h($bill['billing_month']); ?>/<?= h($bill['billing_year']); ?></td>
+                            <td class="text-danger fw-bold"><?= h(number_format((float) $bill['total_amount'], 0, ',', '.')); ?> đ</td>
+                            <td><span class="badge text-bg-warning"><?= h($bill['status']); ?></span></td>
                         </tr>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
-            <?php if (count($studentsWithDebt) > 10): ?>
-                <div class="mt-3 text-center text-muted small">
-                    ... và <?= count($studentsWithDebt) - 10; ?> sinh viên nữa nợ tiền phòng
-                </div>
-            <?php endif; ?>
+                    </tbody>
+                </table>
             <?php endif; ?>
         </div>
     </div>
@@ -155,7 +224,7 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                     <select id="dashboardRoomFloor" class="form-select form-select-sm" data-filter-key="floor">
                         <option value="">Tất cả tầng</option>
                         <?php foreach ($topRoomFloors as $floor): ?>
-                            <option value="<?= Security::e((string) $floor); ?>">Tầng <?= Security::e((string) $floor); ?></option>
+                            <option value="<?= h($floor); ?>">Tầng <?= h($floor); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -178,45 +247,49 @@ require_once __DIR__ . '/../../views/partials/admin_header.php';
                         <option value="none">Chưa có điểm</option>
                     </select>
                 </div>
-                <div class="admin-filter-actions">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button>
-                </div>
+                <div class="admin-filter-actions"><button type="button" class="btn btn-sm btn-outline-secondary" data-filter-clear>Đặt lại</button></div>
             </div>
             <table id="dashboardTopRoomsTable" class="table datatable table-hover align-middle">
                 <thead><tr><th>Mã phòng</th><th>Tầng</th><th>Sức chứa</th><th>Đang ở</th><th>Điểm TB</th></tr></thead>
                 <tbody>
-                    <?php foreach ($topRooms as $row): ?>
-                        <?php
-                        $dashboardRoomCapacity = max(0, (int) ($row['capacity'] ?? 0));
-                        $dashboardRoomOccupancy = max(0, (int) ($row['occupancy'] ?? 0));
-                        if ($dashboardRoomCapacity > 0 && $dashboardRoomOccupancy >= $dashboardRoomCapacity) {
-                            $dashboardRoomOccupancyState = 'full';
-                        } elseif ($dashboardRoomOccupancy > 0) {
-                            $dashboardRoomOccupancyState = 'occupied';
-                        } else {
-                            $dashboardRoomOccupancyState = 'empty';
-                        }
-                        $dashboardRoomScore = (float) ($row['avg_boarding_score'] ?? 0);
-                        $dashboardRoomScoreBand = $dashboardRoomScore >= 80 ? 'high' : ($dashboardRoomScore >= 60 ? 'medium' : ($dashboardRoomScore > 0 ? 'low' : 'none'));
-                        ?>
-                        <tr data-floor="<?= Security::e((string) $row['floor_number']); ?>"
-                            data-occupancy-state="<?= Security::e($dashboardRoomOccupancyState); ?>"
-                            data-score-band="<?= Security::e($dashboardRoomScoreBand); ?>">
-                            <td class="fw-semibold">P<?= Security::e((string) $row['room_number']); ?></td>
-                            <td><?= Security::e((string) $row['floor_number']); ?></td>
-                            <td><?= Security::e((string) $row['capacity']); ?></td>
-                            <td><?= Security::e((string) $row['occupancy']); ?>/<?= Security::e((string) $row['capacity']); ?></td>
-                            <td><?= Security::e((string) $row['avg_boarding_score']); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
+                <?php foreach ($topRooms as $row): ?>
+                    <?php
+                    $capacity = max(0, (int) ($row['capacity'] ?? 0));
+                    $occupancy = max(0, (int) ($row['occupancy'] ?? 0));
+                    if ($capacity > 0 && $occupancy >= $capacity) {
+                        $occupancyState = 'full';
+                    } elseif ($occupancy > 0) {
+                        $occupancyState = 'occupied';
+                    } else {
+                        $occupancyState = 'empty';
+                    }
+                    $score = (float) ($row['avg_boarding_score'] ?? 0);
+                    $scoreBand = $score >= 80 ? 'high' : ($score >= 60 ? 'medium' : ($score > 0 ? 'low' : 'none'));
+                    ?>
+                    <tr data-floor="<?= h($row['floor_number']); ?>" data-occupancy-state="<?= h($occupancyState); ?>" data-score-band="<?= h($scoreBand); ?>">
+                        <td class="fw-semibold">P<?= h($row['room_number']); ?></td>
+                        <td><?= h($row['floor_number']); ?></td>
+                        <td><?= h($row['capacity']); ?></td>
+                        <td><?= h($row['occupancy']); ?>/<?= h($row['capacity']); ?></td>
+                        <td><?= h($row['avg_boarding_score']); ?></td>
+                    </tr>
+                <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
     </div>
     <div class="col-xl-4">
         <div class="panel-glass rounded-5 p-4 h-100">
-            <div class="section-subtitle text-uppercase fw-semibold small mb-2">Điểm nhấn giao diện</div>
-            <h2 class="section-title mb-3">Xin chào, <?= Security::e($currentUser['full_name'] ?? 'Admin'); ?></h2>
+            <div class="section-subtitle text-uppercase fw-semibold small mb-2">Quản trị</div>
+            <h2 class="section-title mb-3">Xin chào, <?= h($currentUser['full_name'] ?? 'Admin'); ?></h2>
+            <div class="mb-3 text-secondary small">Sức chứa: <?= h($roomStats['occupied']); ?>/<?= h($roomStats['totalCapacity']); ?> chỗ đang sử dụng</div>
             <div class="d-grid gap-3">
-                <div class="d-flex gap-3"><div class="icon-badge primary flex-shrink-0"><i class="bi bi-layout-sidebar-inset"></i></div><div><div class="fw-semibold">Sidebar cố định</div><div class="text-secondary">Menu chính luôn hiển thị để điều hướng nhanh.</div></div></div>
+                <a class="btn btn-outline-dark" href="students.php">Xem hồ sơ đăng ký</a>
+                <a class="btn btn-outline-dark" href="rooms.php">Quản lý phòng</a>
+                <a class="btn btn-outline-dark" href="contracts.php">Quản lý hợp đồng</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php require_once __DIR__ . '/../../views/partials/admin_footer.php'; ?>

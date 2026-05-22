@@ -5,19 +5,44 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/app.php';
 Security::requireAdminAuth();
 
+function fetchRoomDetail(PDO $pdo, int $roomId): ?array
+{
+    $stmt = $pdo->prepare('SELECT * FROM Room WHERE room_id = :room_id LIMIT 1');
+    $stmt->execute([':room_id' => $roomId]);
+    $room = $stmt->fetch();
+
+    return $room ?: null;
+}
+
+function fetchStudentsByRoom(PDO $pdo, int $roomId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT s.student_id, s.full_name, s.student_code, s.department, s.boarding_score,
+               c.contract_id, c.start_date, c.end_date, c.status
+          FROM Student s
+          JOIN Contract c ON c.student_id = s.student_id
+         WHERE c.room_id = :room_id AND c.status = 'Đang ở'
+      ORDER BY c.start_date DESC
+    ");
+    $stmt->execute([':room_id' => $roomId]);
+
+    return $stmt->fetchAll();
+}
+
+$pdo = Database::connection();
 $roomId = (int) ($_GET['id'] ?? 0);
 if ($roomId <= 0) {
     header('Location: ' . APP_URL . '/admin/rooms.php');
     exit;
 }
 
-$room = RoomRepository::find($roomId);
+$room = fetchRoomDetail($pdo, $roomId);
 if (!$room) {
     header('Location: ' . APP_URL . '/admin/rooms.php');
     exit;
 }
 
-$students = RoomRepository::studentsByRoom($roomId);
+$students = fetchStudentsByRoom($pdo, $roomId);
 $roomDepartments = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['department'] ?? ''), $students))));
 sort($roomDepartments);
 $roomContractStatuses = array_values(array_unique(array_filter(array_map(static fn (array $student): string => (string) ($student['status'] ?? ''), $students))));

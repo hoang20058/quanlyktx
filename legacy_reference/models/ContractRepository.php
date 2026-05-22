@@ -66,7 +66,6 @@ final class ContractRepository
 
     public static function studentsWithDebt(): array
     {
-        // Xóa tính toán SQL phức tạp, lấy toàn bộ ra rồi xử lý bằng PHP
         $sql = "
             SELECT c.*, s.full_name, s.student_code, s.priority_level, r.room_number, r.price AS room_price
               FROM Contract c
@@ -101,7 +100,7 @@ final class ContractRepository
     }
 
     /**
-     * Đã sửa logic: Nhận trực tiếp $roomPrice thay vì $roomId để tránh lỗi N+1 Query.
+     * Nhận trực tiếp $roomPrice thay vì $roomId để tránh lỗi N+1 Query.
      */
     public static function calculateRoomFee(float $roomPrice, string $startDate, ?string $endDate, int $discountPercent = 0): float
     {
@@ -146,7 +145,6 @@ final class ContractRepository
             $discountPercent = self::getDiscountByPriority($priorityLevel);
         }
 
-        // Đã xóa phần truyền :price vào payload
         $payload = [
             ':student_id' => $studentId,
             ':room_id' => $roomId,
@@ -159,14 +157,12 @@ final class ContractRepository
 
         if ($contractId > 0) {
             $payload[':contract_id'] = $contractId;
-            // Đã xóa cột price khỏi truy vấn UPDATE
             $sql = 'UPDATE Contract SET student_id = :student_id, room_id = :room_id, start_date = :start_date, end_date = :end_date, deposit = :deposit, discount_percent = :discount_percent, status = :status WHERE contract_id = :contract_id';
             $stmt = $db->prepare($sql);
             $stmt->execute($payload);
             return $contractId;
         }
 
-        // Đã xóa cột price khỏi truy vấn INSERT
         $sql = 'INSERT INTO Contract (student_id, room_id, start_date, end_date, deposit, discount_percent, status) VALUES (:student_id, :room_id, :start_date, :end_date, :deposit, :discount_percent, :status)';
         $stmt = $db->prepare($sql);
         $stmt->execute($payload);

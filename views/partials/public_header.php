@@ -40,3 +40,12 @@ $pageTitle = $pageTitle ?? APP_NAME;
     </div>
 </nav>
 <main>
+    <?php $flashMessage = function_exists('getFlashMessage') ? getFlashMessage() : null; ?>
+    <?php if ($flashMessage): ?>
+        <section class="container my-4">
+            <div class="alert alert-<?= h((string) ($flashMessage['type'] ?? 'success')); ?> alert-dismissible fade show" role="alert">
+                <?= h((string) ($flashMessage['message'] ?? '')); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </section>
+    <?php endif; ?>

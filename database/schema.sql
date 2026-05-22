@@ -1,47 +1,4 @@
--- Clean schema for the 5-table version requested by the user
--- Tables: Student, Room, Contract, UtilityBill, Notice
 
-CREATE DATABASE IF NOT EXISTS quanlyktx
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
-
-USE quanlyktx;
-
--- Drop both new and legacy/plural table names to enforce the 5-table constraint
-SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS Notice;
-DROP TABLE IF EXISTS notices;
-DROP TABLE IF EXISTS UtilityBill;
-DROP TABLE IF EXISTS utilitybill;
-DROP TABLE IF EXISTS Contract;
-DROP TABLE IF EXISTS contract;
-DROP TABLE IF EXISTS contracts;
-DROP TABLE IF EXISTS Room;
-DROP TABLE IF EXISTS room;
-DROP TABLE IF EXISTS rooms;
-DROP TABLE IF EXISTS room_changes;
-DROP TABLE IF EXISTS Student;
-DROP TABLE IF EXISTS student;
-DROP TABLE IF EXISTS students;
-DROP TABLE IF EXISTS bills;
-DROP TABLE IF EXISTS bill;
-DROP TABLE IF EXISTS users;
-
-SET FOREIGN_KEY_CHECKS = 1;
-
--- Student table: stores applicants and resident students
-CREATE TABLE Student (
-    student_id INT AUTO_INCREMENT PRIMARY KEY,
-    full_name VARCHAR(100) NOT NULL,
-    student_code VARCHAR(20) NULL UNIQUE,
-    dob DATE NULL,
-    phone VARCHAR(15) NULL,
-    email VARCHAR(100) NULL,
-    department VARCHAR(100) NULL,
-    status ENUM('Chờ duyệt','Đang ở','Đã chuyển đi') DEFAULT 'Chờ duyệt',
-    priority_level TINYINT DEFAULT 8,
-    boarding_score INT DEFAULT 100
-);
 -- Schema for simplified Dormitory Management (5 tables only)
 CREATE DATABASE IF NOT EXISTS quanlyktx
     CHARACTER SET utf8mb4
@@ -68,7 +25,7 @@ CREATE TABLE Student (
     phone VARCHAR(15) NULL,
     email VARCHAR(100) NULL,
     department VARCHAR(100) NULL,
-    status ENUM('Chờ duyệt','Đang ở','Đã chuyển đi') DEFAULT 'Chờ duyệt',
+    status ENUM('Chờ duyệt','Đang ở','Đã chuyển đi','Đã từ chối') DEFAULT 'Chờ duyệt',
     priority_level TINYINT DEFAULT 8,
     boarding_score INT DEFAULT 100
 );
@@ -87,19 +44,14 @@ CREATE TABLE Room (
 );
 
 -- 3) Contract table
--- Represents an assignment of a student to a room.
--- price = calculated room fee for duration (room.price × months) - discount applied
--- deposit = amount student has already paid towards room fee
--- discount_percent = discount percentage applied to price (e.g., 50 for 50% off)
+-- Represents the assignment of a student to a room.
+-- Money is managed in UtilityBill so contracts stay simple.
 CREATE TABLE Contract (
     contract_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     room_id INT NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NULL,
-    price DECIMAL(12,2) DEFAULT 0,
-    deposit DECIMAL(12,2) DEFAULT 0,
-    discount_percent INT DEFAULT 0,
     status ENUM('Đang ở','Đã chuyển ra','Đã hủy') DEFAULT 'Đang ở',
     FOREIGN KEY (student_id) REFERENCES Student(student_id) ON DELETE CASCADE,
     FOREIGN KEY (room_id) REFERENCES Room(room_id) ON DELETE CASCADE
@@ -113,6 +65,8 @@ CREATE TABLE UtilityBill (
     billing_month TINYINT,
     billing_year INT,
     total_amount DECIMAL(12,2) NOT NULL,
+    new_electric_index DECIMAL(12,2) DEFAULT 0,
+    new_water_index DECIMAL(12,2) DEFAULT 0,
     status ENUM('Chưa thanh toán','Đã thanh toán') DEFAULT 'Chưa thanh toán',
     FOREIGN KEY (room_id) REFERENCES Room(room_id) ON DELETE CASCADE
 );

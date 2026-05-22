@@ -8,11 +8,57 @@ require_once __DIR__ . '/../core/Database.php';
 
 Env::load(__DIR__ . '/../.env');
 
+function detectAppUrl(): string
+{
+    $envAppUrl = trim((string) (getenv('APP_URL') ?: ''));
+
+    if (PHP_SAPI === 'cli' || empty($_SERVER['HTTP_HOST'])) {
+        return rtrim($envAppUrl !== '' ? $envAppUrl : '/quanlyktx/public', '/');
+    }
+
+    $isHttps = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $scheme = $isHttps ? 'https' : 'http';
+    $host = (string) $_SERVER['HTTP_HOST'];
+    $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    $scriptDir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+
+    if (str_ends_with($scriptDir, '/admin')) {
+        $scriptDir = rtrim(str_replace('\\', '/', dirname($scriptDir)), '/');
+    }
+
+    if ($scriptDir === '.' || $scriptDir === '/') {
+        $scriptDir = '';
+    }
+
+    return rtrim($scheme . '://' . $host . $scriptDir, '/');
+}
+
+function detectAppBaseUrl(string $appUrl): string
+{
+    if (!str_starts_with($appUrl, 'http://') && !str_starts_with($appUrl, 'https://')) {
+        $basePath = rtrim(str_replace('\\', '/', dirname($appUrl)), '/');
+        return $basePath === '' || $basePath === '.' ? '/' : $basePath;
+    }
+
+    $parts = parse_url($appUrl);
+    if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
+        return rtrim(dirname($appUrl), '/\\');
+    }
+
+    $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+    $path = (string) ($parts['path'] ?? '');
+    $basePath = rtrim(str_replace('\\', '/', dirname($path)), '/');
+
+    if ($basePath === '' || $basePath === '.') {
+        $basePath = '';
+    }
+
+    return $parts['scheme'] . '://' . $parts['host'] . $port . $basePath;
+}
+
 spl_autoload_register(static function (string $class): void {
     $paths = [
         __DIR__ . '/../core/' . $class . '.php',
-        __DIR__ . '/../models/' . $class . '.php',
-        __DIR__ . '/../controllers/' . $class . '.php',
     ];
 
     foreach ($paths as $path) {
@@ -28,11 +74,11 @@ if (!defined('APP_NAME')) {
 }
 
 if (!defined('APP_URL')) {
-    define('APP_URL', getenv('APP_URL') ?: 'http://localhost/quanlyktx/public');
+    define('APP_URL', detectAppUrl());
 }
 
 if (!defined('APP_BASE_URL')) {
-    define('APP_BASE_URL', rtrim(dirname(APP_URL), '/\\'));
+    define('APP_BASE_URL', detectAppBaseUrl(APP_URL));
 }
 
 if (!defined('APP_TIMEZONE')) {

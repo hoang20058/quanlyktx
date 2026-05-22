@@ -4,15 +4,109 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/app.php';
 
+function fetchHomeRooms(PDO $pdo): array
+{
+    $stmt = $pdo->query("
+        SELECT r.*,
+               COUNT(c.contract_id) AS occupied_count,
+               ROUND(COALESCE(AVG(s.boarding_score), 0), 2) AS avg_boarding_score
+          FROM Room r
+     LEFT JOIN Contract c ON c.room_id = r.room_id AND c.status = 'Đang ở'
+     LEFT JOIN Student s ON s.student_id = c.student_id
+      GROUP BY r.room_id
+      ORDER BY r.room_number ASC
+    ");
+
+    return $stmt->fetchAll();
+}
+
+function fetchHomeNotices(PDO $pdo): array
+{
+    $stmt = $pdo->query('
+        SELECT n.*, r.room_number, s.full_name AS student_name
+          FROM Notice n
+     LEFT JOIN Room r ON r.room_id = n.room_id
+     LEFT JOIN Student s ON s.student_id = n.student_id
+      ORDER BY n.date DESC, n.notice_id DESC
+    ');
+
+    return $stmt->fetchAll();
+}
+
+function fetchHomeRoomStats(PDO $pdo): array
+{
+    return [
+        'totalRooms' => (int) $pdo->query('SELECT COUNT(*) FROM Room')->fetchColumn(),
+        'activeRooms' => (int) $pdo->query("SELECT COUNT(*) FROM Room WHERE status = 'Hoạt động'")->fetchColumn(),
+        'totalCapacity' => (int) $pdo->query('SELECT COALESCE(SUM(capacity), 0) FROM Room')->fetchColumn(),
+        'occupied' => (int) $pdo->query("SELECT COUNT(*) FROM Contract WHERE status = 'Đang ở'")->fetchColumn(),
+    ];
+}
+
+function fetchHomeStudentStats(PDO $pdo): array
+{
+    return [
+        'waiting' => (int) $pdo->query("SELECT COUNT(*) FROM Student WHERE status = 'Chờ duyệt'")->fetchColumn(),
+        'living' => (int) $pdo->query("SELECT COUNT(*) FROM Student WHERE status = 'Đang ở'")->fetchColumn(),
+    ];
+}
+
+function fetchHomeTopRooms(PDO $pdo, int $limit): array
+{
+    $stmt = $pdo->prepare("
+        SELECT r.room_id, r.room_number, r.floor_number, r.capacity, r.price, r.status,
+               COUNT(c.contract_id) AS occupancy,
+               ROUND(COALESCE(AVG(s.boarding_score), 0), 2) AS avg_boarding_score
+          FROM Room r
+     LEFT JOIN Contract c ON c.room_id = r.room_id AND c.status = 'Đang ở'
+     LEFT JOIN Student s ON s.student_id = c.student_id
+      GROUP BY r.room_id
+      ORDER BY occupancy DESC, avg_boarding_score DESC, r.room_number ASC
+         LIMIT :limit
+    ");
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll();
+}
+
+function fetchHomeTopStudents(PDO $pdo, int $limit): array
+{
+    $stmt = $pdo->prepare('
+        SELECT student_id, full_name, student_code, department, boarding_score
+          FROM Student
+      ORDER BY boarding_score DESC, student_id ASC
+         LIMIT :limit
+    ');
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll();
+}
+
+function fetchHomeUnpaidBills(PDO $pdo): array
+{
+    $stmt = $pdo->query("
+        SELECT b.*, r.room_number
+          FROM UtilityBill b
+          JOIN Room r ON r.room_id = b.room_id
+         WHERE b.status = 'Chưa thanh toán'
+      ORDER BY b.billing_year DESC, b.billing_month DESC
+    ");
+
+    return $stmt->fetchAll();
+}
+
+$pdo = Database::connection();
 $pageTitle = 'Trang chủ - ' . APP_NAME;
 
-$rooms = RoomRepository::all();
-$notices = NoticeRepository::all();
-$roomStats = RoomRepository::stats();
-$studentStats = StudentRepository::registrationStats();
-$topRooms = RoomRepository::topRooms(5);
-$topStudents = StudentRepository::topStudents(5);
-$unpaidBills = UtilityBillRepository::unpaidBills();
+$rooms = fetchHomeRooms($pdo);
+$notices = fetchHomeNotices($pdo);
+$roomStats = fetchHomeRoomStats($pdo);
+$studentStats = fetchHomeStudentStats($pdo);
+$topRooms = fetchHomeTopRooms($pdo, 5);
+$topStudents = fetchHomeTopStudents($pdo, 5);
+$unpaidBills = fetchHomeUnpaidBills($pdo);
 
 $totalCapacity = max(1, (int) $roomStats['totalCapacity']);
 $occupiedCount = (int) $roomStats['occupied'];

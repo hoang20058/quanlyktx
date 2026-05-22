@@ -61,7 +61,7 @@ final class Security
     public static function requireAdminAuth(): void
     {
         if (!self::isAdmin()) {
-            $url = getenv('APP_URL') ?: '/';
+            $url = defined('APP_URL') ? APP_URL : '/';
             header('Location: ' . rtrim($url, '/') . '/admin/login.php');
             exit;
         }

@@ -20,3 +20,30 @@ function getPriorityDescription(int $level): string
 
     return $map[$level] ?? $map[8];
 }
+
+function h(mixed $value): string
+{
+    return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
+function setFlashMessage(string $type, string $message): void
+{
+    $_SESSION['flash_message'] = [
+        'type' => $type,
+        'message' => $message,
+    ];
+}
+
+function getFlashMessage(): ?array
+{
+    $message = $_SESSION['flash_message'] ?? null;
+    unset($_SESSION['flash_message']);
+
+    return is_array($message) ? $message : null;
+}
+
+function redirectTo(string $url): never
+{
+    header('Location: ' . $url);
+    exit;
+}

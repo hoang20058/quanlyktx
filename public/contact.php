@@ -4,27 +4,70 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/app.php';
 
-$pageTitle = 'Liên hệ - ' . APP_NAME;
+function defaultContactForm(): array
+{
+    return [
+        'contact_name' => '',
+        'contact_email' => '',
+        'contact_subject' => '',
+        'contact_message' => '',
+    ];
+}
 
-$successMessage = '';
+function cleanContactInput(array $input): array
+{
+    $data = defaultContactForm();
+
+    foreach ($data as $key => $_) {
+        $data[$key] = trim((string) ($input[$key] ?? ''));
+    }
+
+    return $data;
+}
+
+function handleSendContactMessage(array $input): void
+{
+    if ($input['contact_name'] === '' || $input['contact_email'] === '' || $input['contact_message'] === '') {
+        throw new InvalidArgumentException('Vui lòng điền đủ thông tin bắt buộc.');
+    }
+
+    if (!filter_var($input['contact_email'], FILTER_VALIDATE_EMAIL)) {
+        throw new InvalidArgumentException('Email không hợp lệ.');
+    }
+
+    $line = sprintf(
+        "[%s] %s | %s | %s | %s\n",
+        date('Y-m-d H:i:s'),
+        $input['contact_name'],
+        $input['contact_email'],
+        $input['contact_subject'],
+        str_replace(["\r", "\n"], ' ', $input['contact_message'])
+    );
+
+    $logFile = __DIR__ . '/../storage/contact_messages.log';
+    if (!is_dir(dirname($logFile))) {
+        mkdir(dirname($logFile), 0755, true);
+    }
+
+    file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
+}
+
+$pageTitle = 'Liên hệ - ' . APP_NAME;
+$formData = defaultContactForm();
 $errorMessage = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = (string) ($_POST['action'] ?? 'send');
+    $formData = cleanContactInput($_POST);
+
     try {
-        $name = trim((string) ($_POST['contact_name'] ?? ''));
-        $email = trim((string) ($_POST['contact_email'] ?? ''));
-        $subject = trim((string) ($_POST['contact_subject'] ?? ''));
-        $message = trim((string) ($_POST['contact_message'] ?? ''));
-        
-        if (empty($name) || empty($email) || empty($message)) {
-            throw new RuntimeException('Vui lòng điền đủ thông tin bắt buộc.');
+        if ($action === 'send') {
+            handleSendContactMessage($formData);
+            setFlashMessage('success', 'Cảm ơn! Tin nhắn của bạn đã được ghi nhận. Chúng tôi sẽ phản hồi sớm nhất.');
+            redirectTo(APP_URL . '/contact.php');
         }
 
-        $line = sprintf("[%s] %s | %s | %s | %s\n", date('Y-m-d H:i:s'), $name, $email, $subject, $message);
-        $logFile = __DIR__ . '/../storage/contact_messages.log';
-        @mkdir(dirname($logFile), 0755, true);
-        file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
-        $successMessage = 'Cảm ơn! Tin nhắn của bạn đã được ghi nhận. Chúng tôi sẽ phản hồi sớm nhất.';
+        throw new InvalidArgumentException('Thao tác không hợp lệ.');
     } catch (Throwable $e) {
         $errorMessage = $e->getMessage();
     }
@@ -38,11 +81,12 @@ require_once __DIR__ . '/../views/partials/public_header.php';
     <p class="hero-lead mb-0">Chúng tôi luôn sẵn sàng lắng nghe ý kiến và thắc mắc của bạn</p>
 </section>
 
-<?php if ($successMessage !== ''): ?>
-    <section class="container my-4"><div class="alert alert-success border-0 rounded-4 mb-0"><i class="bi bi-check-circle me-2"></i><?= Security::e($successMessage); ?></div></section>
-<?php endif; ?>
 <?php if ($errorMessage !== ''): ?>
-    <section class="container my-4"><div class="alert alert-danger border-0 rounded-4 mb-0"><i class="bi bi-exclamation-circle me-2"></i><?= Security::e($errorMessage); ?></div></section>
+    <section class="container my-4">
+        <div class="alert alert-danger border-0 rounded-4 mb-0">
+            <i class="bi bi-exclamation-circle me-2"></i><?= h($errorMessage); ?>
+        </div>
+    </section>
 <?php endif; ?>
 
 <section class="container my-5">
@@ -51,25 +95,26 @@ require_once __DIR__ . '/../views/partials/public_header.php';
             <div class="feature-card p-4 p-lg-5 h-100">
                 <h2 class="section-title mb-4">Gửi tin nhắn</h2>
                 <form method="post" class="row g-3">
+                    <input type="hidden" name="action" value="send">
                     <div class="col-12">
                         <label class="form-label fw-semibold">Họ và tên *</label>
-                        <input name="contact_name" class="form-control form-control-lg" required>
+                        <input name="contact_name" class="form-control form-control-lg" value="<?= h($formData['contact_name']); ?>" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Email *</label>
-                        <input name="contact_email" type="email" class="form-control form-control-lg" required>
+                        <input name="contact_email" type="email" class="form-control form-control-lg" value="<?= h($formData['contact_email']); ?>" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Chủ đề</label>
-                        <input name="contact_subject" class="form-control form-control-lg" placeholder="Vd: Tư vấn về phòng ở">
+                        <input name="contact_subject" class="form-control form-control-lg" placeholder="Vd: Tư vấn về phòng ở" value="<?= h($formData['contact_subject']); ?>">
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Nội dung *</label>
-                        <textarea name="contact_message" class="form-control form-control-lg" rows="6" required></textarea>
+                        <textarea name="contact_message" class="form-control form-control-lg" rows="6" required><?= h($formData['contact_message']); ?></textarea>
                     </div>
                     <div class="col-12">
                         <button class="btn btn-primary btn-lg rounded-pill px-5" type="submit"><i class="bi bi-send me-2"></i>Gửi tin nhắn</button>
-                        <a href="/" class="btn btn-outline-dark btn-lg rounded-pill px-5 ms-2">Quay lại</a>
+                        <a href="<?= h(APP_URL); ?>/" class="btn btn-outline-dark btn-lg rounded-pill px-5 ms-2">Quay lại</a>
                     </div>
                 </form>
             </div>
@@ -82,7 +127,7 @@ require_once __DIR__ . '/../views/partials/public_header.php';
                         <div class="icon-badge primary flex-shrink-0" style="width: 60px; height: 60px;"><i class="bi bi-geo-alt-fill"></i></div>
                         <div>
                             <h5 class="fw-semibold mb-1">Địa chỉ</h5>
-                            <p class="text-muted mb-0">Khu II, Đ. 3/2, Xuân Khánh, Ninh Kiều, Cần Thơ</p>
+                            <p class="text-muted mb-0">Cụm 10, Hạ Mỗ, Ô Diên, Hà Nội</p>
                         </div>
                     </div>
                     <div class="d-flex gap-3 align-items-start">

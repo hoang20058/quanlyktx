@@ -46,6 +46,26 @@ try {
     $totalW = $usageW * $unitW;
     $totalAmount = $totalE + $totalW;
 
+    $latestUnpaid = UtilityBillRepository::latestUnpaidByRoom($roomId);
+    if ($latestUnpaid) {
+        $latestUnpaid['billing_month'] = $month;
+        $latestUnpaid['billing_year'] = $year;
+        $latestUnpaid['total_amount'] = (float) ($latestUnpaid['total_amount'] ?? 0) + $totalAmount;
+        $latestUnpaid['new_electric_index'] = $newE;
+        $latestUnpaid['new_water_index'] = $newW;
+
+        $billId = UtilityBillRepository::save($latestUnpaid);
+
+        Api::json([
+            'ok' => true,
+            'message' => 'Đã cộng dồn vào hóa đơn chưa thanh toán trước đó',
+            'bill_id' => $billId,
+            'usage_e' => $usageE,
+            'usage_w' => $usageW,
+            'total_amount' => $latestUnpaid['total_amount']
+        ]);
+    }
+
     if (UtilityBillRepository::existsForRoomAndMonthYear($roomId, $month, $year)) {
         Api::json(['ok' => false, 'message' => 'Hóa đơn tháng này đã tồn tại'], 409);
     }
@@ -59,6 +79,8 @@ try {
         'usage_w' => $usageW,
         'unit_price_e' => $unitE,
         'unit_price_w' => $unitW,
+        'new_electric_index' => $newE,
+        'new_water_index' => $newW,
         'status' => 'Chưa thanh toán',
     ];
 

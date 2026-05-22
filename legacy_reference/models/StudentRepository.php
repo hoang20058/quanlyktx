@@ -29,7 +29,7 @@ final class StudentRepository
     }
 
     /**
-     * Kiểm tra mã sinh viên đã tồn tại (bỏ qua ID hiện tại khi update)
+     * Kiểm tra mã sinh viên đã tồn tại 
      */
     public static function isStudentCodeDuplicate(string $code, int $excludeStudentId = 0): bool
     {
@@ -118,6 +118,12 @@ final class StudentRepository
         $data['priority_level'] = (int) ($data['priority_level'] ?? 8);
         $data['boarding_score'] = (int) ($data['boarding_score'] ?? 100);
         return self::save($data);
+    }
+
+    public static function rejectRegistration(int $studentId): bool
+    {
+        $stmt = Database::connection()->prepare("UPDATE Student SET status = 'Đã từ chối' WHERE student_id = :id AND status = 'Chờ duyệt'");
+        return $stmt->execute([':id' => $studentId]);
     }
 
     public static function transferRoom(int $studentId, int $newRoomId): void

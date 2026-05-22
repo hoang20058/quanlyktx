@@ -6,20 +6,37 @@ require_once __DIR__ . '/../../config/app.php';
 
 Security::startSession();
 
+function handleAdminLogin(string $username, string $password): void
+{
+    if ($username !== 'admin' || $password !== 'admin') {
+        throw new InvalidArgumentException('Tên đăng nhập hoặc mật khẩu không đúng.');
+    }
+
+    Security::loginAdmin([
+        'id' => 1,
+        'username' => 'admin',
+        'full_name' => 'Administrator',
+    ]);
+}
+
 $pageTitle = 'Đăng nhập Admin - ' . APP_NAME;
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = (string) ($_POST['action'] ?? 'login');
     $username = trim((string) ($_POST['username'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
 
-    if ($username === 'admin' && $password === 'admin') {
-        $user = ['id' => 1, 'username' => 'admin', 'full_name' => 'Administrator'];
-        Security::loginAdmin($user);
+    try {
+        if ($action !== 'login') {
+            throw new InvalidArgumentException('Thao tác không hợp lệ.');
+        }
+
+        handleAdminLogin($username, $password);
         header('Location: ' . APP_URL . '/admin/index.php');
         exit;
-    } else {
-        $error = 'Tên đăng nhập hoặc mật khẩu không đúng.';
+    } catch (Throwable $e) {
+        $error = $e->getMessage();
     }
 }
 
@@ -51,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="alert alert-danger"><?= Security::e($error); ?></div>
                         <?php endif; ?>
                         <form method="post" action="">
+                            <input type="hidden" name="action" value="login">
                             <div class="mb-3">
                                 <label class="form-label">Tên đăng nhập</label>
                                 <input name="username" class="form-control form-control-lg" placeholder="admin" required>

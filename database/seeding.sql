@@ -3,14 +3,6 @@
 
 START TRANSACTION;
 
-SET FOREIGN_KEY_CHECKS = 0;
-TRUNCATE TABLE UtilityBill;
-TRUNCATE TABLE Contract;
-TRUNCATE TABLE Notice;
-TRUNCATE TABLE Student;
-TRUNCATE TABLE Room;
-SET FOREIGN_KEY_CHECKS = 1;
-
 INSERT INTO Room (room_number, floor_number, capacity, room_type, status, price) VALUES
 (101, 1, 4, 'Thường', 'Hoạt động', 500000),
 (102, 1, 4, 'Thường', 'Hoạt động', 500000),
